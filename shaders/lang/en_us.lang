@@ -40,6 +40,7 @@ option.SHADOWS=Shadows
 option.shadowMapResolution=Shadow resolution
 option.shadowDistance=Shadow distance
 option.shadowDistanceRenderMul=Shadow render culling range
+option.shadowHardwareFiltering=Hardware shadow filtering
 option.SHADOW_SAMPLES=Shadow samples
 option.SHADOW_SOFTNESS=Shadow softness
 option.SSAO=Ambient occlusion
