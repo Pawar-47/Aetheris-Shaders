@@ -36,7 +36,19 @@ detection path that depended entirely on one file being parsed as expected.
 
 ## Current stage
 
-**1.5.1 implemented, statically validated, still awaiting its first run in Minecraft.**
+**1.5.2 implemented, compiled, still awaiting its first run in Minecraft.**
+
+For the first time the pack has been through a compiler. `tools/glsl_check.py` compiles all
+46 stages with `glslangValidator` in CI, after reproducing what Iris does to the source:
+include resolution, `#version 330 compatibility` to core, the legacy built-ins renamed and
+declared, and the `colortexNFormat` directives Iris consumes itself removed.
+
+It immediately caught the error that was reported — `vec3 flat` in `lib/atmosphere.glsl`,
+where `flat` is a reserved interpolation qualifier — and with that one identifier fixed, 46
+of 46 stages compile. "Statically validated" meant something far weaker than that for the
+first six releases, and that gap, not any single bug, is what made every previous diagnosis a
+guess.
+
 
 The failure now has a name: `java.lang.NumberFormatException: For input string: "2"`, which is
 Iris parsing `/* RENDERTARGETS: 0, 2 */`. Each entry of that list goes through

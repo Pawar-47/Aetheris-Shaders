@@ -6,6 +6,31 @@ All notable changes to Aetheris Shaders are recorded here. The format follows
 
 A release is made when there is something worth installing, not when a number changes.
 
+## [1.5.2] - 2026-12-01
+
+The parse error from the log, and the reason it took six releases to find it.
+
+### Fixed
+
+- **`vec3 flat` in `atmosphere.glsl`.** `flat` is a reserved interpolation qualifier in GLSL
+  3.30, so a local variable of that name is a syntax error. Iris' ANTLR parser rejected the
+  entire composite translation unit with `no viable alternative at input 'vec3 flat'`. Every
+  pass includes `atmosphere.glsl`, so one identifier broke every program at once. Renamed to
+  `flattened`.
+- The whole class was scanned afterwards: `flat` was the only reserved word used as an
+  identifier anywhere in the pack, and no built-in function name is shadowed by a
+  declaration.
+
+### Added
+
+- **`tools/glsl_check.py`, run in CI on every push.** It compiles all 46 stages with
+  `glslangValidator` after doing what Iris does to the source: resolve `#include`, rewrite
+  `#version 330 compatibility` to core, rename and declare the legacy built-ins, and remove
+  the `colortexNFormat` directives that Iris consumes itself. Its first run compiled 45 of
+  46 stages, and the only complaint was this reserved word — the pack had never been through
+  a compiler before a release until now. That is the actual fix for "one error at a time
+  from the log".
+
 ## [1.5.1] - 2026-11-30
 
 The pack failed with a real exception at last: `java.lang.NumberFormatException: For input
