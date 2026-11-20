@@ -6,7 +6,49 @@ All notable changes to Aetheris Shaders are recorded here. The format follows
 
 A release is made when there is something worth installing, not when a number changes.
 
-## [1.1.0] - 2026-11-25
+## [1.2.0] - 2026-11-26
+
+Completes the pack against the brief and against Iris' documented behaviour. Two of the
+fixes here change the image in ways that were plainly wrong before, and both were invisible
+from inside the code until the pipeline was traced end to end.
+
+### Fixed
+
+- **The shadow pass never alpha tested.** Minecraft 1.17 and later do the cutout in the
+  shader, not in fixed function state, so a shadow fragment stage that writes depth
+  unconditionally gives every leaf block and every flower the shadow of a solid cube. The
+  pass now carries the texture coordinate and applies the same coverage preserving
+  threshold the visible pass uses, so the silhouette that casts the shadow is the silhouette
+  that is drawn.
+- **Lava and glowstone were shaded as ordinary lit surfaces** when they arrive through the
+  translucent pass. They now take their material from the block ID, which is the emissive
+  path.
+- **Ambient occlusion read the wrong depth buffer** for translucent pixels: the normal taps
+  came from `depthtex1` while the surface being shaded came from `depthtex0`, so behind a
+  pane of glass the occlusion floated on the wall behind instead of sitting on the glass.
+
+### Changed
+
+- **The shadow pass is depth only.** It declares no colour output and no `DRAWBUFFERS` line,
+  so Iris allocates no `shadowcolour0` and the pass stops writing a 2048x2048 RGBA8
+  attachment that nothing in the pack reads: about 16 MB of write bandwidth per frame on a
+  25 GB/s bus.
+- **Contact shadows are used, not just written.** The shadow map is sampled for occlusion as
+  well as for light, inside twenty blocks and folded out before that bound, so the corner
+  where two blocks meet and the foot of a wall read as contact rather than as a flat
+  junction. It multiplies the ambient term only; direct sunlight is already answered by the
+  shadow lookup.
+- `UNDERWATER_TINT` is a real option. The label existed with no option behind it. It now
+  scales both the colour of the underwater medium and its density, and at 1.0 it gives
+  exactly the previous look.
+
+### Added
+
+- Two more Iris rules in the validator: a stage that uses the compatibility built-ins must
+  declare the compatibility profile, because that is the condition under which Iris patches
+  them and it throws while transforming a vertex stage otherwise; and `mc_Entity` must be a
+  `vec2`, as Iris documents it.
+
 
 The first release after 1.0.0, and the first one whose Iris loading path was checked against
 Iris' own documentation and transform source rather than against OptiFine lore. It also

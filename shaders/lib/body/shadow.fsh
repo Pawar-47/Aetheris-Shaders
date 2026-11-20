@@ -1,21 +1,27 @@
 #include "/lib/settings.glsl"
 #include "/lib/util.glsl"
 
-/* Shadow map fragment stage.
+/* Shadow map fragment stage: depth only, with the cutout.
  *
- * Depth only, so this writes a constant. shadowtex0 is used by the shading and it
- * carries the alpha tested foliage, which is what gives tree shadows the shape of
- * the leaves instead of a solid rectangle.
+ * Two decisions here.
  *
- * The constant is not just left at white: writing the biome tint here would be the
- * hook for coloured shadows, and the shaders.properties setting is wired up to make
- * that a one line change rather than a new pass.
+ * **The cutout.** Minecraft does not alpha test in fixed function state any more; the
+ * cutout lives in the shader. A shadow pass that writes depth unconditionally therefore
+ * gives every leaf block and every flower the shadow of a solid cube, which is the single
+ * most obvious way a pack can look wrong under a tree. The same coverage preserving
+ * threshold the visible pass uses is applied here, so the silhouette that casts the
+ * shadow is the silhouette that is drawn.
+ *
+ * **No colour output.** There is no DRAWBUFFERS line and no `out` declaration, so Iris
+ * allocates no shadowcolour buffer and this pass writes nothing but depth. It used to
+ * write a constant white into a 2048x2048 RGBA8 attachment every frame that nothing in
+ * the pack reads; on a 25 GB/s shared memory bus that is a real cost for no information.
  */
 
-in float blockId;
+uniform sampler2D gtexture;
 
-layout(location = 0) out vec4 outColor;
+in vec2 texcoord;
 
 void main() {
-    outColor = vec4(1.0);
+    if (texture(gtexture, texcoord).a < aetherisAlphaCoverage(gl_FragCoord.xy)) discard;
 }

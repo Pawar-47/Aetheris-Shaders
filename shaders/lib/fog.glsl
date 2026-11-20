@@ -34,7 +34,9 @@ const float FOG_BASE_HEIGHT = 58.0;
 vec3 aetherisUnderwaterTint(AetherisSky sky, vec3 direction) {
     vec3 deep = vec3(0.016, 0.072, 0.098) * (0.30 + 1.05 * sky.day);
     float towardsSun = saturate(dot(direction, sky.sunDir) * 0.5 + 0.5);
-    return deep + sky.sunRadiance * (0.020 * towardsSun) + sky.night * vec3(0.004, 0.010, 0.020);
+    vec3 tint = deep + sky.sunRadiance * (0.020 * towardsSun)
+              + sky.night * vec3(0.004, 0.010, 0.020);
+    return tint * UNDERWATER_TINT;
 }
 
 vec3 aetherisApplyFog(vec3 colour, vec3 playerPos, AetherisSky sky) {
@@ -44,8 +46,10 @@ vec3 aetherisApplyFog(vec3 colour, vec3 playerPos, AetherisSky sky) {
     if (isEyeInWater == 1) {
         // Short range, strong absorption, and brighter towards the surface. Water
         // is the one medium where a heavy handed fog is correct: this is how a lake
-        // actually looks from inside.
-        float amount = 1.0 - exp(-distanceToCamera * (0.085 * FOG_DENSITY));
+        // actually looks from inside. The density follows UNDERWATER_TINT so that the
+        // slider thins the medium as well as greying it; at 1.0 this is 0.085.
+        float medium = 0.085 * FOG_DENSITY * (0.55 + 0.45 * UNDERWATER_TINT);
+        float amount = 1.0 - exp(-distanceToCamera * medium);
         return mix(colour, aetherisUnderwaterTint(sky, normalize(playerPos)), saturate(amount));
     }
 

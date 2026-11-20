@@ -29,6 +29,10 @@ rules of the Iris dialect specifically:
      the same uniform or constant is a redefinition, and one rejected program is enough
      for Iris to drop the whole pack and render vanilla. This check exists because that
      is exactly what a duplicate `colortex0` did to 1.0.0.
+ 11. A stage that uses the compatibility built-ins declares the compatibility profile,
+     because that is the condition under which Iris patches them, and `mc_Entity` is a
+     `vec2` as Iris documents it. Both are Iris rules, not GLSL rules, and neither is
+     visible to a generic validator.
 
 What this does NOT do, and what the README says plainly: it does not prove the pack
 compiles on a GPU, and it cannot check runtime behaviour, visual quality or frame
@@ -259,6 +263,11 @@ def check_unit(label, text):
         if name not in IRIS_SAMPLERS:
             fail("%s: sampler '%s' is not one Iris binds" % (label, name))
 
+    for match in MC_ENTITY_RE.finditer(stripped):
+        if match.group(1) != "vec2":
+            fail("%s: mc_Entity is declared as %s; Iris documents it as vec2"
+                 % (label, match.group(1)))
+
     for stem in ("shadowMapResolution", "shadowDistance"):
         count = len(re.findall(r'const\s+\w+\s+%s\s*=' % stem, stripped))
         if count == 0:
@@ -269,6 +278,43 @@ def check_unit(label, text):
     check_balance(label, stripped)
     check_calls(label, stripped, collect_definitions(stripped))
     check_duplicate_declarations(label, stripped)
+
+
+# Iris rewrites the version statement of every stage before compiling it. A stage that
+# uses the compatibility built-ins has to ask for the compatibility profile: with a core
+# or absent profile and a version of 150 or more, Iris throws while transforming a vertex
+# stage, and one thrown program takes the whole pack back to vanilla rendering.
+COMPAT_BUILTINS = (
+    "gl_Vertex", "gl_ModelViewMatrix", "gl_ProjectionMatrix",
+    "gl_ModelViewProjectionMatrix", "gl_NormalMatrix", "gl_TextureMatrix",
+    "gl_MultiTexCoord", "gl_Color", "gl_Normal", "gl_FragData",
+)
+
+MC_ENTITY_RE = re.compile(r'^\s*in\s+(\w+)\s+mc_Entity\s*;', re.MULTILINE)
+
+
+def check_version_statement(label, path, unit):
+    header = None
+    for line in read_text(path).splitlines():
+        candidate = line.strip()
+        if not candidate or candidate.startswith("//") or candidate.startswith("/*"):
+            continue
+        header = candidate
+        break
+    if header is None or not header.startswith("#version"):
+        return  # reported by the caller
+
+    parts = header.split()
+    profile = parts[2] if len(parts) > 2 else None
+    body = strip_comments(unit)
+    for builtin in COMPAT_BUILTINS:
+        if builtin not in body:
+            continue
+        if profile != "compatibility":
+            fail("%s: %s uses %s but does not declare the compatibility profile; Iris "
+                 "patches the legacy built-ins only when the version statement asks for it"
+                 % (label, os.path.basename(path), builtin))
+        break
 
 
 def declared_varyings(regex, text):
@@ -304,6 +350,9 @@ def check_program(name, vsh_path, fsh_path):
 
     check_unit(label + ".vsh", unit_vsh)
     check_unit(label + ".fsh", unit_fsh)
+
+    check_version_statement(label, vsh_path, unit_vsh)
+    check_version_statement(label, fsh_path, unit_fsh)
 
     if "void main" not in unit_vsh:
         fail("%s.vsh: no main" % label)

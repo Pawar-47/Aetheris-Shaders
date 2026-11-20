@@ -160,6 +160,13 @@ render distance.
 render pass entirely rather than leaving it running unsampled. That is about a third of the
 vertex work back.
 
+The pass is depth only: no colour output and no `DRAWBUFFERS`, so Iris allocates no
+`shadowcolour0` buffer and the pass does not write a 2048x2048 RGBA8 attachment every
+frame. That attachment is 16.7 MB, and writing it once per frame at 40 fps is about
+670 MB/s of the 25 GB/s bus for data nothing reads. The one fetch the pass does pay for is
+the texture sample in the fragment stage, which is the cutout — without it every leaf casts
+the shadow of a full block, so it is not optional.
+
 ---
 
 ## Decision: camera-relative world space throughout

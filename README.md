@@ -9,7 +9,7 @@ integrated GPU, with BSL Shaders as its artistic reference. Where BSL's look com
 particular way of handling light, atmosphere and water, this pack studies that principle
 and re-derives its own version of it at a fraction of the cost.
 
-**Status: 1.1.0. Statically validated, not yet run in a game.** See
+**Status: 1.2.0. Statically validated, not yet run in a game.** See
 [What has and has not been verified](#what-has-and-has-not-been-verified) before you
 expect anything from it.
 
@@ -132,6 +132,9 @@ From there, in the order light actually takes:
 5. **Fresnel**, Schlick with water's real F0 of 0.02.
 6. **Glitter**: two sun lobes, a tight one that rides individual wave crests and a broad
    one that gives the surface a sheen towards a low sun.
+7. **The underwater medium**, one option that scales both its colour and its density, so a
+   lake seen from inside reads as a body of water rather than as a blue filter over the
+   screen.
 
 The wave normals are five directional components whose amplitude falls with wavelength at
 a constant ratio. That ratio is the wave steepness, and holding it constant across the
@@ -222,16 +225,29 @@ so a torch can still reach into a corner. A deep blue night floor, because a neu
 is what makes cheap night scenes look like a dimmed day. Soft shadows from one 2048 map
 with a per-pixel rotated nine-tap spiral.
 
+Two things about that pass are worth naming, because both were wrong at some point and
+neither is visible from inside the shading code:
+
+- **The shadow pass applies the cutout.** Minecraft 1.17 and later do it in the shader, not
+  in fixed function state, so a shadow fragment stage that writes depth unconditionally
+  gives every leaf block and every flower the shadow of a solid cube. The pass carries the
+  texture coordinate and uses the same coverage threshold as the visible pass.
+- **The same map is sampled for occlusion, not just for light**, inside twenty blocks and
+  folded out before that bound. That is what makes the corner where two blocks meet and the
+  foot of a wall read as contact rather than as a flat junction. It multiplies ambient only.
+
+The pass itself is depth only: no colour output, no `DRAWBUFFERS`, so Iris allocates no
+`shadowcolour0` and nothing writes a 2048x2048 colour attachment that nothing reads.
+
 ---
 
 ## What has and has not been verified
 
 This is important, and it is stated plainly rather than buried.
 
-**Verified in CI** — this passes on `main`. It has already earned its keep: during
-development it found two genuine compile errors (a missing include in the composite path,
-and two vertex stages carrying no option constants) that would have sent the whole pack
-back to vanilla rendering.
+**Verified in CI** — this passes on `main`. It has already earned its keep three times: a
+missing include in the composite path, two vertex stages carrying no option constants, and
+a duplicate `colortex0` that would have sent the whole pack back to vanilla rendering.
 
 - Every `#include` resolves to a file that exists.
 - Braces and `#if`/`#endif` balance in every translation unit.
@@ -249,6 +265,9 @@ back to vanilla rendering.
   duplicate `colortex0` in the composite pass is what took 1.0.0 down to vanilla rendering:
   Mesa rejects the redefinition, and one rejected program is all it takes for Iris to drop
   the pack.
+- A stage that uses the compatibility built-ins declares the compatibility profile, because
+  that is the condition under which Iris patches them, and `mc_Entity` is a `vec2` as Iris
+  documents it. Both are Iris rules rather than GLSL rules.
 - The pack zips into the correct layout.
 
 **Not verified**

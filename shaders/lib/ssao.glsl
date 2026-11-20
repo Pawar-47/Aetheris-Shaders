@@ -57,13 +57,18 @@ float aetherisSSAO(vec2 uv, float depth) {
     vec3 centre = screenToView(uv, depth);
     vec2 texel = vec2(1.0 / viewWidth, 1.0 / viewHeight);
 
-    // Surface normal from the depth buffer's own derivatives. Five taps, but four of
-    // them are reused by nothing else and a normal is what separates a crease from a
-    // silhouette.
-    vec3 left  = screenToView(uv - vec2(texel.x, 0.0), texture(depthtex1, uv - vec2(texel.x, 0.0)).r);
-    vec3 right = screenToView(uv + vec2(texel.x, 0.0), texture(depthtex1, uv + vec2(texel.x, 0.0)).r);
-    vec3 down  = screenToView(uv - vec2(0.0, texel.y), texture(depthtex1, uv - vec2(0.0, texel.y)).r);
-    vec3 up    = screenToView(uv + vec2(0.0, texel.y), texture(depthtex1, uv + vec2(0.0, texel.y)).r);
+    // Surface normal from the depth buffer's own derivatives. Four taps, and a normal is
+    // what separates a crease from a silhouette.
+    //
+    // depthtex0 rather than depthtex1: this is shading the surface that is actually
+    // visible, and behind a pane of glass that surface is the glass, not the wall two
+    // blocks further on. For opaque pixels the two buffers hold the same value, so this
+    // only changes the translucent case, where it is the difference between ambient
+    // occlusion sitting on the object and floating behind it.
+    vec3 left  = screenToView(uv - vec2(texel.x, 0.0), texture(depthtex0, uv - vec2(texel.x, 0.0)).r);
+    vec3 right = screenToView(uv + vec2(texel.x, 0.0), texture(depthtex0, uv + vec2(texel.x, 0.0)).r);
+    vec3 down  = screenToView(uv - vec2(0.0, texel.y), texture(depthtex0, uv - vec2(0.0, texel.y)).r);
+    vec3 up    = screenToView(uv + vec2(0.0, texel.y), texture(depthtex0, uv + vec2(0.0, texel.y)).r);
 
     vec3 normal = cross(right - left, up - down);
     float normalLength = length(normal);
@@ -113,7 +118,7 @@ float aetherisSSAO(vec2 uv, float depth) {
         vec3 screenPoint = viewToScreen(samplePoint);
         if (!screenPositionValid(screenPoint)) continue;
 
-        float storedDistance = linearizeDepth(texture(depthtex1, screenPoint.xy).r);
+        float storedDistance = linearizeDepth(texture(depthtex0, screenPoint.xy).r);
         float sampleDistance = -samplePoint.z;
 
         // Occluders only count when they are near this surface. Without the upper

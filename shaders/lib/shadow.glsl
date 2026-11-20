@@ -120,16 +120,23 @@ float sampleShadow(vec3 playerPos, vec3 normal, float NdotL) {
 
 /* Cheap contact darkening in the shadow lookup itself.
  *
- * A surface pressed against another surface reads as a soft dark line even where
- * the sun is not involved. This is not a real occlusion test; it darkens where the
- * stored shadow depth is very close to the receiver, which is where contact
- * happens. Costs no extra taps because it reuses the spiral. */
+ * A surface pressed against another surface reads as a soft dark line even where the sun
+ * is not involved. This is not a real occlusion test; it darkens where the stored shadow
+ * depth is a little in front of the receiver, which is where contact happens. Four taps
+ * from the same spiral, and it is only called inside twenty blocks.
+ *
+ * The test is deliberately "strictly in front, and not far in front". The obvious form,
+ * step(storedDepth, receiverDepth + eps), also counts the surface's own stored depth: on a
+ * vertical face the normal offset moves the receiver sideways rather than towards the
+ * light, so its light space depth does not change, every tap reads as an occluder, and
+ * every wall in the world loses half its ambient. Range is expressed in shadow map depth,
+ * where 0.012 is roughly one block of contact at ninety six blocks of shadow distance. */
 float sampleShadowContact(vec3 playerPos, vec3 normal, float NdotL) {
 #if SHADOWS == 0
     return 1.0;
 #else
     float slope = 1.0 - clamp(NdotL, 0.0, 1.0);
-    vec3 position = playerPos + normal * (0.035 + 0.090 * slope);
+    vec3 position = playerPos + normal * (0.045 + 0.110 * slope);
 
     vec4 clip = shadowProjection * (shadowModelView * vec4(position, 1.0));
     if (clip.w <= 0.0) return 1.0;
@@ -141,18 +148,21 @@ float sampleShadowContact(vec3 playerPos, vec3 normal, float NdotL) {
     float receiverDepth = ndc.z * 0.5 + 0.5;
     float texel = 2.2 / float(shadowMapResolution);
 
-    // Deliberately not called "near": near and far are Iris uniforms in this pack's
-    // translation units, and a local shadowing one of them is legal but is exactly the
-    // kind of thing a driver is entitled to be unhelpful about.
-    float contact = 0.0;
+    float bias = 0.0006 + 0.0012 * slope;
+    const float contactRange = 0.012;
+
+    float occluded = 0.0;
     for (int i = 0; i < 4; i++) {
         float storedDepth = texture(shadowtex0, uv + SHADOW_TAPS[i] * texel).r;
-        contact += step(storedDepth, receiverDepth + 0.0045);
+        float delta = receiverDepth - storedDepth;
+        if (delta > bias && delta < contactRange) {
+            occluded += 1.0 - delta / contactRange;
+        }
     }
-    contact *= 0.25;
+    occluded *= 0.25;
 
     float distance01 = saturate(length(playerPos) / shadowDistance);
-    return mix(1.0, 1.0 - 0.45 * contact, (1.0 - distance01) * 0.85);
+    return mix(1.0, 1.0 - 0.35 * occluded, (1.0 - distance01) * 0.85);
 #endif
 }
 

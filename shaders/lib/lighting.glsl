@@ -120,6 +120,24 @@ vec3 aetherisShadeSurface(vec3 albedo, vec3 normal, vec3 playerPos, vec2 lightma
     // neutral floor is what makes cheap night scenes look like a dimmed day.
     ambient += vec3(0.074, 0.090, 0.124) * (sky.night * (0.55 + 0.45 * upness));
 
+    // Contact shadows. A surface pressed against another reads as a soft dark line even
+    // where the sun is not involved: the corner where two blocks meet, the foot of a
+    // wall, the underside of an overhang. This is the shadow map used for occlusion
+    // rather than for light, and it is bounded to twenty blocks because past that one
+    // texel is wider than the feature it is supposed to darken. Four taps, near field
+    // only, and folded out before the bound so it cannot end in a visible ring.
+    //
+    // It multiplies the ambient only. Direct sunlight is already answered by the shadow
+    // lookup above, and darkening a sunlit face for a crease it is not in is the classic
+    // way contact shadows turn into dirt.
+#if SHADOWS == 1
+    float eyeDistance = length(playerPos);
+    if (eyeDistance < 20.0) {
+        float contact = sampleShadowContact(playerPos, normal, NdotL);
+        ambient *= mix(1.0, contact, 1.0 - smoothstep(12.0, 20.0, eyeDistance));
+    }
+#endif
+
     vec3 blocklightColour = vec3(1.00, 0.72, 0.42) * (blockLight * BLOCKLIGHT_STRENGTH);
 
     // Block light is local, so it is only partly occluded by vertex AO. Lighting a

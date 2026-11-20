@@ -93,6 +93,12 @@ const float WATER_WAVE_SPEED = 1.00; // [0.0 1.0 2.0]
 
 const float WATER_CLARITY = 1.00; // [0.0 1.0 2.5]
 
+// How strongly the water column colours what is seen through it, and how much of the
+// medium there is to see when the eye is inside it. 1.0 is the designed look; 0 turns
+// underwater into clear air, which is useful for finding a bug in the fog rather than
+// for playing.
+const float UNDERWATER_TINT = 1.00; // [0.0 1.0 2.0]
+
 const float SHADOW_SOFTNESS = 1.00; // [0.5 1.0 2.5]
 
 /* --------------------------------------------------------------------------

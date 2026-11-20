@@ -54,9 +54,12 @@ void main() {
     }
 
     AetherisSky sky = aetherisSkyState();
+    // Material from the block ID, not the default: lava and glowstone are translucent in
+    // Minecraft and arrive in this pass, and shading them as ordinary lit surfaces is
+    // what leaves a lava lake looking like orange stone.
     vec3 lit = aetherisShadeSurface(sRGBToLinear(albedo.rgb), normalize(playerNormal),
                                     playerPosition, lightmapCoord, 1.0,
-                                    AETHERIS_MAT_DEFAULT, sky);
+                                    aetherisMaterialFromId(blockId), sky);
 
     outColor = vec4(aetherisApplyFog(lit, playerPosition, sky), texel.a);
 

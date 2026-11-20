@@ -59,6 +59,13 @@ pipeline and nothing else. There is no companion resource pack and none is requi
 - **Iris Shaders** — the shader loader this pack targets. Iris's own code is not included
   or modified. Its shader interface documentation and its uniform semantics are used as
   specified.
+
+  Iris is also the authority the pack's compatibility was checked against, rather than
+  OptiFine lore: the version statement rules, the `mc_Entity` attribute, the
+  `shaders.properties` directives and the order in which buffer transformations run were
+  all read from Iris's documentation, and its transformation source was read for behaviour
+  only — what it replaces a legacy built-in with, and under which conditions it throws.
+  Nothing was copied from it and no Iris code is redistributed here.
 - **Minecraft** — assets are used through the game's own shader interface. No game assets
   are redistributed here.
 

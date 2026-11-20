@@ -8,11 +8,11 @@ work resumes from the exact point it stopped rather than from the beginning.
 
 ---
 
-**Current release:** 1.1.0 (`Aetheris-Shaders-1.1.0.zip`). 1.0.0 was the first release. The
-1.0.1 tree that was written next was never committed and never published, so its two fixes
-are folded into 1.1.0 rather than pretending to be a release of their own. The changelog
-says so; an earlier version of this file claimed 1.0.1 had been published and that was
-wrong.
+**Current release:** 1.2.0 (`Aetheris-Shaders-1.2.0.zip`). 1.0.0 was the first release, 1.1.0
+fixed the loading failure. The 1.0.1 tree that was written between them was never committed
+and never published, so its two fixes are folded into 1.1.0 rather than pretending to be a
+release of their own. The changelog says so; an earlier version of this file claimed 1.0.1
+had been published and that was wrong.
 
 ---
 
@@ -35,7 +35,7 @@ detection path that depended entirely on one file being parsed as expected.
 
 ## Current stage
 
-**1.1.0 implemented, statically validated, still awaiting its first run in Minecraft.**
+**1.2.0 implemented, statically validated, still awaiting its first run in Minecraft.**
 
 Every pass is written and wired up. There is no placeholder, no stubbed function and no
 `TODO` in the shader source. The pack packages into a correctly rooted zip.
@@ -150,14 +150,40 @@ error. That is not the same as knowing the pack works.
       and `underwaterOverlay` are all real directives; and Iris removes unused functions
       and patches varying mismatches, so neither is fatal.
 
+### 1.2.0 — completeness pass
+
+- [x] **The shadow pass now applies the cutout.** It carried no texture coordinate and wrote
+      depth unconditionally, so every leaf block and every flower cast the shadow of a solid
+      cube. This was the largest visual defect left in the pack and it was invisible from
+      inside the shading code, because the visible pass was cutting out correctly.
+- [x] The shadow pass is depth only: no colour output, no `DRAWBUFFERS`, no `shadowcolour0`.
+      Saves a 2048x2048 RGBA8 write per frame, about 16.7 MB.
+- [x] Contact shadows wired in. `sampleShadowContact` existed but was never called, so the
+      brief's "contact shadows where affordable" was unimplemented. It now multiplies the
+      ambient term inside twenty blocks, folded out before that bound.
+- [x] Lava and glowstone take the emissive material in the translucent pass instead of the
+      default path.
+- [x] Ambient occlusion reads `depthtex0` for its normal taps, matching the surface it is
+      shading. Behind glass it was occluding the wall behind the pane.
+- [x] `UNDERWATER_TINT` promoted from a dangling label to a real option, scaling both the
+      colour and the density of the underwater medium.
+- [x] Validator gained the two Iris rules that are not GLSL rules: the compatibility profile
+      must be declared wherever the legacy built-ins are used, and `mc_Entity` must be a
+      `vec2`.
+- [x] The composite and final vertex path was traced through Iris' `CompositeTransformer`:
+      `gl_Vertex`, `gl_MultiTexCoord0`, `gl_TextureMatrix[0..7]` and
+      `gl_ModelViewProjectionMatrix` are all replaced on the compatibility path, so the
+      fullscreen quad is correct as written.
+
 ---
 
 ## Latest successful validation
 
-**CI green on `main` as of the 1.0.0 release commit.** The `Validate` workflow runs the
-static validation, the block ID agreement check, the option label check, packaging and
-artifact upload. The 1.1.0 tree has not been through it yet at the time this was written:
-the push that carries this file is what runs it.
+**CI green on `main` for 1.1.0.** The `Validate` workflow runs the static validation, the
+block ID agreement check, the option label check, packaging and artifact upload, and the
+`Release` workflow published `Aetheris-Shaders-1.1.0.zip` from the same commit. The 1.2.0
+tree had not been through it at the time this was written: the push that carries this file
+is what runs it.
 
 The validator earned its place during 1.0.0. It found:
 
@@ -250,12 +276,16 @@ In the order they should be done.
    0.645 to 0.565 by reasoning about the noise distribution, not by looking at it. If the
    deck is now too heavy, `CLOUD_COVERAGE` is the slider; if it is too thin at the default,
    the threshold needs another 0.02 rather than the slider.
-7. **Measure.** Press F3, note frame time at 1280x720, and record it in the README. Then
+7. **Check the shadow cutout and the contact term.** Leaf shadows should now have the shape
+   of the leaves rather than of the block. If the contact darkening reads as dirt rather
+   than as contact, the `0.45` in `sampleShadowContact` is the number to lower; the twenty
+   block bound in `aetherisShadeSurface` is the other.
+8. **Measure.** Press F3, note frame time at 1280x720, and record it in the README. Then
    decide whether the Balanced preset should move.
-8. **Tune the water** using the table at the end of `docs/PERFORMANCE.md`.
-9. **Then** consider 1.2.0: bloom if the budget allows it after measurement, or a
-   half-resolution cloud march into a separate buffer if the sky turns out to be the
-   bottleneck.
+9. **Tune the water** using the table at the end of `docs/PERFORMANCE.md`.
+10. **Then** consider 1.3.0: bloom if the budget allows it after measurement, or a
+    half-resolution cloud march into a separate buffer if the sky turns out to be the
+    bottleneck.
 
 ---
 
