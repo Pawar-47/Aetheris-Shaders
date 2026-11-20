@@ -23,8 +23,8 @@
  * Everything is a compile time option, or a constant that describes the machine this
  * pack is tuned for: an Intel Core i3-5005U with Intel HD Graphics 5500.
  *
- * Intel's 5th-generation graphics guide lists 24 EUs (23 on some Core i3 SKUs) and
- * only three texture samplers for HD 5500. The platform shares system RAM with the CPU;
+ * The i3-5005U's HD 5500 configuration has 23 active EUs. Intel's 5th-generation
+ * graphics guide lists three texture samplers for this GPU family. The platform shares system RAM with the CPU;
  * 25.6 GB/s is the dual-channel maximum, not a guarantee for every 8 GB configuration.
  * The budget decisions are documented in docs/PERFORMANCE.md: keep one shadow map and
  * forward geometry, bound every ray/sample loop, and run bloom/light shafts in quarter-
@@ -38,7 +38,7 @@
 // Shadows: 0 disables the shadow render pass entirely, not just the lookups.
 #define SHADOWS 1 // [0 1]
 
-// The soft shadow kernel. 4 is hard and cheap, 9 is soft and costs 9 taps.
+// Performance uses a fixed symmetric four-tap kernel; 6/9 taps add softer penumbrae.
 #define SHADOW_SAMPLES 4 // [4 6 9]
 
 const int shadowMapResolution = 1024; // [512 1024 2048]

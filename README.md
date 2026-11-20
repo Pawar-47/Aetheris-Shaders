@@ -10,13 +10,14 @@ i3-5005U's ULT configuration exposes 23 active EUs. BSL Shaders are its artistic
 particular way of handling light, atmosphere and water, this pack studies that principle
 and re-derives its own version of it at a fraction of the cost.
 
-**Branch build: 1.6.1 (perf/full-feature-performance).** GitHub Actions run 44799052684
-completed successfully: static validation, GLSL compilation/linking of all 46 stages,
-option and block-ID checks, ZIP packaging and artifact upload all passed. The repository's
-published v1.6.1 tag points to an older commit on main and does **not** contain this branch's
-feature-preserving pipeline; use the branch's CI artifact to test these changes. Iris loading,
-visual output and frame rate on the target laptop remain untested. No new release has been
-published from this branch. See [verification status](#what-has-and-has-not-been-verified).
+**Branch build: 1.6.1 (perf/full-feature-performance).** GitHub Actions run
+[44800409615](../../actions/runs/44800409615) completed successfully after the compact HDR
+buffer change: static validation, all 46 GLSL stages, block-ID/option checks, buffer-format
+guard and packaging passed. The repository's published v1.6.1 tag points to an older commit
+on main and does **not** contain this branch's feature-preserving pipeline; use the branch's
+CI artifact to test these changes. Iris loading, visual output and frame rate on the target
+laptop remain untested. No new release has been published from this branch. See
+[verification status](#what-has-and-has-not-been-verified).
 
 ### Iris, not OptiFine
 
@@ -276,37 +277,34 @@ block IDs; it is not PBR and requires no companion resource pack.
 
 ## What has and has not been verified
 
-The implementation evidence below is tied to the perf/full-feature-performance branch at
-commit a38bb8fba37c1555d2f0d1c74a63477ad3eab108. The documentation-only updates followed it.
+The evidence below is tied to commit `4395226889b8841fc89359a492eaa8f16b2ff183`
+and GitHub Actions run [44800409615](../../actions/runs/44800409615), which completed
+**successfully**.
 
-**Completed steps in the recorded GitHub Actions job**
+**Completed CI checks**
 
-- Static validation completed successfully.
+- Static validation passed.
 - The GLSL check reported: **“All 46 stages compile, and every program links.”**
-- The block ID map and material constants agreed, including the new gloss material ID.
-- Every settings option had a language label.
-- The packaging script produced Aetheris-Shaders-1.6.1.zip with 85 files (146,284 bytes
-  uncompressed; 64,357 bytes uploaded as the CI artifact).
-- The artifact upload step reported success.
-
-GitHub records run 44799052684 as **completed / success**. The earlier in-progress state was
-stale while the runner was completing its cleanup steps.
+- Block ID consistency passed, including gloss material ID 10400.
+- Every exposed setting has a language label.
+- The validator confirms both low-resolution effects use the compact
+  `R11F_G11F_B10F` format, both buffers are quarter resolution, and the
+  composite1 → composite2 → final route is intact.
+- Packaging succeeded. The CI artifact contains the installable
+  `Aetheris-Shaders-1.6.1.zip`; the inner ZIP has 85 entries (81 files and 4 directories),
+  146,267 bytes uncompressed. The uploaded artifact is 64,031 bytes.
+- The package contains no companion resource/PBR pack.
 
 **Not verified**
 
-- The pack has not been confirmed loading in Iris on Minecraft 1.21.5.
-- The shader output has not been visually inspected in a live world.
-- No FPS, frame-time, GPU temperature or memory measurements have been taken on the
-  Core i3-5005U / HD 5500.
-- CI's GLSL transformation is a useful compatibility check, but it is not a substitute for
-  Iris' own shader preprocessing and a real OpenGL driver.
+- Loading the pack in Iris on Minecraft 1.21.5 under Linux Mint/Mesa.
+- Runtime behaviour, visual artefacts, reflection/cloud appearance or driver-specific issues.
+- Average FPS, 1% lows, frame-time stability, GPU utilisation, temperature or shared-memory
+  pressure on the actual Core i3-5005U / HD 5500 machine.
 
-Do not treat the 1.6.1 artifact as a tested release. The next meaningful test is to install
-that exact artifact in the SK Launcher instance, enable Iris debug mode, and capture
-logs/latest.log plus the rendered result. If the pack loads, benchmark the same scene at a
-fixed resolution and render distance before changing the defaults.
-
----
+CI's GLSL transformation is a useful compile/interface check, not a substitute for Iris'
+own preprocessing and a real OpenGL driver. No FPS gain is claimed until the pack has been
+measured on the target PC. This CI artifact is a development build, not a published release.
 
 ## Repository layout
 

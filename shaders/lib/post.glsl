@@ -3,14 +3,16 @@
 
 #include "/lib/util.glsl"
 
-/* Post processing: anti aliasing, tone mapping, grading and the final quantise.
+/* Final-resolution post processing: FXAA, tone mapping, grading and quantisation.
  *
- * Short by design. On a 24 EU part every fullscreen tap is visible in the frame
- * time, so there is no bloom chain, no depth of field, no motion blur and no
- * sharpening pass fighting an anti aliasing pass. What is here earns its cost:
+ * The final pass stays deliberately small. Bloom and screen-space light shafts are
+ * generated earlier in the two quarter-resolution composite stages and arrive here
+ * in one compact HDR buffer. This avoids a full-resolution blur chain.
  *
- *   - FXAA, because this GPU is going to be asked to run at 720p and below where
- *     MSAA is unaffordable and block edges shimmer badly.
+ * Depth of field and motion blur are not currently implemented in Aetheris; do not
+ * describe them as active features. There is no temporal history buffer in this pass.
+ *
+ *   - FXAA, because the target is 720p and below where MSAA is unaffordable.
  *   - ACES filmic, so bright sky and sun roll off instead of clipping to paper.
  *   - A restrained grade: exposure, temperature, saturation, contrast, vignette.
  */

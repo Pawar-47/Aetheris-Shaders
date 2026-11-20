@@ -1,11 +1,11 @@
-# Current development checkpoint — 2026-11-21
+# Current development checkpoint — 2026-11-20
 
 ## Active branch and scope
 
 - Repository: Pawar-47/Aetheris-Shaders
 - Work branch: perf/full-feature-performance
-- Latest code-validation commit: a38bb8fba37c1555d2f0d1c74a63477ad3eab108
-- Latest README commit before this checkpoint: cc018b0f6db1b0ddc8651db4ac2a8d09f5e1accf
+- Latest code-validation commit: 4395226889b8841fc89359a492eaa8f16b2ff183
+- Latest README and performance documentation are updated in that same commit.
 - Version file: 1.6.1
 - Default branch: main; it has not been changed.
 - The published v1.6.1 tag points to e2f7bb73c7848576895ae8041e8237e31970f1f3 on main. It predates this branch's feature-preserving pipeline.
@@ -38,29 +38,37 @@
 
 ## Completed in this continuation
 
-- Aligned README presets and verification claims with the feature-preserving pipeline.
-- Removed obsolete probe-pack installation instructions.
-- Clarified that the existing v1.6.1 release is older than this branch and does not contain the new pipeline.
-- Rewrote docs/PERFORMANCE.md with the actual low-end budgets and honest limitations.
-- Strengthened tools/validate.py so it checks every retained Performance effect, shadow
-  culling, both low-resolution effects in both program-enable expressions, buffer scales,
-  and the composite1 -> composite2 -> final effects-buffer route.
-- Corrected the validator's property parser to handle the spaces around equals signs used
-  in shaders.properties. The first stricter-validator run exposed this parser bug; it was
-  fixed and the next run passed.
+- The Performance profile keeps dynamic shadows, AO, water reflections, volumetric clouds,
+  FXAA, bloom, depth-gated volumetric light shafts and material gloss enabled.
+- Shadow cost is reduced with one 1024 map, a 64-block radius, Iris shadow culling, a
+  positive `shadowDistanceRenderMul`, a fixed four-tap kernel and contact-shadow reuse.
+- AO reconstructs its surface normal from derivatives, avoiding four neighbouring depth reads.
+- Bloom and light shafts share two quarter-resolution passes and one combined effect route.
+- Both low-resolution effect buffers use `R11F_G11F_B10F` (32-bit packed HDR) rather than
+  `RGBA16F` (64-bit); their non-negative RGB effect energy needs no alpha, halving their
+  storage and read/write traffic. The validator guards the format declarations.
+- Clouds reject empty/horizon regions early and avoid a second noise octave when the primary
+  density cannot contribute.
+- Material gloss is a forward-lighting lobe on tagged blocks; no PBR/resource pack is required.
+- `tools/validate.py` checks the retained Performance features, culling, buffer scales,
+  formats, program-enable expressions and composite1 → composite2 → final routing.
+- The user-supplied archive and public template remain read-only; no source files are copied.
+  See `docs/REFERENCE-PROVENANCE.md`.
 
 ## CI result
 
-[GitHub Actions run 44799052684](https://github.com/Pawar-47/Aetheris-Shaders/actions/runs/44799052684)
+[GitHub Actions run 44800409615](https://github.com/Pawar-47/Aetheris-Shaders/actions/runs/44800409615)
 
-- Tested commit: a38bb8fba37c1555d2f0d1c74a63477ad3eab108
+- Tested commit: 4395226889b8841fc89359a492eaa8f16b2ff183
 - Final conclusion: **completed / success**
 - Static validation: passed.
 - GLSL compile and program-link check: passed; all 46 stages compile and every program links.
 - Block ID consistency: passed.
 - Option-label check: passed.
-- Packaging: passed; Aetheris-Shaders-1.6.1.zip generated.
-- Artifact upload: passed; artifact ID 14659743064.
+- Compact effect-buffer format and quarter-resolution checks: passed.
+- Packaging: passed; `Aetheris-Shaders-1.6.1.zip` generated.
+- Artifact upload: passed; artifact ID 14660642752 (64,031 bytes). The nested installable ZIP
+  contains 81 files and 4 directories (146,267 uncompressed bytes).
 
 ## Remaining verification boundary
 
@@ -71,10 +79,10 @@ has been performed. Do not claim that the pack is runtime-tested or tuned to mea
 
 ## Next steps
 
-1. Install the exact 1.6.1 CI artifact in the target SK Launcher instance with Iris 1.8.x and
-   Sodium. Enable Iris debug mode before applying it.
-2. If it fails, diagnose the first concrete log or patched-shader error; do not guess from
-   an empty on-screen details pane.
+1. Install the exact artifact from run 44800409615 in the target SK Launcher instance with
+   Iris 1.8.x and Sodium. Enable Iris debug mode before applying it.
+2. If it fails, diagnose the first concrete log or patched-shader error; do not guess from an
+   empty on-screen details pane.
 3. If it loads, capture screenshots and benchmark a repeatable scene at 1280x720 / 6 chunks.
    Compare Performance and Balanced without changing multiple variables at once.
 4. Use those real measurements to tune the default settings.

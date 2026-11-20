@@ -92,7 +92,7 @@ vec3 aetherisShadeSurface(vec3 albedo, vec3 normal, vec3 playerPos, vec2 lightma
 
     // Skip the whole shadow lookup when it cannot change the result. Most of a
     // night time scene and every fully dark cave takes this path, which is worth
-    // six taps a pixel on a part this small.
+    // four taps a pixel on a part this small.
     float shadow = 1.0;
     float contact = 1.0;
 #if SHADOWS == 1
