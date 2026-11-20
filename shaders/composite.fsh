@@ -1,6 +1,6 @@
 #version 330 compatibility
 
-/* DRAWBUFFERS:1 */
+/* RENDERTARGETS: 1 */
 
 /*
 const int colortex0Format = RGBA16F;

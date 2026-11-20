@@ -1,6 +1,6 @@
 #version 330 compatibility
 
-/* DRAWBUFFERS:0 */
+/* RENDERTARGETS: 0 */
 
 /* The colour target is written but never read: this pass exists for its depth. It is
  * declared anyway, because a gbuffers-style program with no fragment output is an

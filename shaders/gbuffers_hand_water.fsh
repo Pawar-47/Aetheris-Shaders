@@ -1,6 +1,6 @@
 #version 330 compatibility
 
-/* DRAWBUFFERS:0 */
+/* RENDERTARGETS: 0 */
 
 /* The held item seen while the eye is submerged. It is lit like any other opaque
  * surface; the water it appears through is handled by the fog when the eye is in

@@ -17,18 +17,9 @@ explain a failed load.
 
 ### Iris, not OptiFine
 
-This pack is written for **Iris**, and it relies on directives OptiFine does not have:
-
-- `separateAo`, which is how vanilla's smooth lighting occlusion reaches the lighting
-  model, in the vertex colour's alpha rather than baked into the albedo.
-- `shadow.enabled`, so the Performance preset removes the shadow pass instead of leaving it
-  running and unsampled.
-- The render type in `mc_Entity.y`, which is the water pipeline's fallback when the block
-  ID map has not resolved.
-
-It is not tested under OptiFine and is not meant to be. Two of those three degrade silently
-there rather than loudly, and a shader pack that half works is worse than one that does not
-load at all.
+This pack is written for **Iris 1.8.x on Minecraft 1.21.5**, and follows the Iris 1.21.5
+shader template layout: `RENDERTARGETS` instead of the OptiFine-era `DRAWBUFFERS`, and
+`mc_Entity` for block identity. It is not tested under OptiFine and is not meant to be.
 
 ---
 
@@ -58,7 +49,10 @@ against, not a compromise between a laptop and a desktop.
 3. Drop it in `.minecraft/shaderpacks/` without unzipping it. On Linux Mint that is
    usually `~/.minecraft/shaderpacks/` or inside the SK Launcher instance folder.
 4. In game: `Options -> Video Settings -> Shader Packs -> Aetheris Shaders`.
-5. Start with the **Balanced** preset. It is the default for a reason.
+5. Press **Ctrl + D** on that screen first if anything goes wrong: it enables Iris' debug
+   mode, which writes the post-processed source to `patched_shaders/` and makes every error
+   in `logs/latest.log` point at a real file and line. See
+   [Troubleshooting](docs/TROUBLESHOOTING.md).
 
 No resource pack is required and none is provided. Every effect in this pack is
 achieved in shader code over vanilla assets.
@@ -77,21 +71,27 @@ These are outside the pack and are the difference between playable and not on th
 
 ---
 
-## Presets
+## Presets — removed until the pack is confirmed to load
 
-Three real presets, each a genuinely different rendering cost and not a relabelling.
+There were three presets here, exposed through the Shader Pack Settings screen. They are
+gone, deliberately, and this is the honest reason: that screen is built from `screen`,
+`sliders` and `profile.*` in `shaders.properties`, and Iris resolves every name in those
+lists against the option set it discovered from the shader sources. For this pack that
+resolution failed at apply time and took the whole pack down with an empty error. Rather
+than guess which directive was responsible, the configuration now carries none of them.
 
-| Preset | Shadows | AO | Water reflections | Clouds | FXAA |
-|---|---|---|---|---|---|
-| **Performance** | pass disabled entirely | off | off | 5 steps, no detail octave, no cirrus | off |
-| **Balanced** (default) | 2048, 6 taps, 96 blocks | 6 samples | 8 steps | 8 steps, detail, cirrus | on |
-| **Visual** | 2048, 9 taps, 128 blocks | 9 samples | 10 steps | 12 steps, detail, cirrus | on |
+The tunables are still in `shaders/lib/settings.glsl` as compile-time defaults, so nothing
+in the renderer changed — only the way you reach them. The three presets come back as soon
+as someone reports the pack loading, and not before.
 
-Performance removes whole passes rather than shaving quality everywhere: no shadow
-render pass, no ambient occlusion, no reflection march, no antialiasing pass. The pack
-still looks like Aetheris, because the things that define its look — the atmosphere
-model, the sky, the water body colour, the wave normals, the sun disc, the tone curve —
-are all still there.
+If you want the Performance or Visual cost profile in the meantime, change these four
+lines in `shaders/lib/settings.glsl`:
+
+| | `SHADOWS` | `SHADOW_SAMPLES` | `WATER_REFLECTIONS` | `CLOUD_STEPS` |
+|---|---|---|---|---|
+| Performance | `0` | `4` | `0` | `5` |
+| Balanced (default) | `1` | `6` | `1` | `8` |
+| Visual | `1` | `9` | `1` | `12` |
 
 ---
 

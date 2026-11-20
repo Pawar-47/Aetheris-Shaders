@@ -6,6 +6,36 @@ All notable changes to Aetheris Shaders are recorded here. The format follows
 
 A release is made when there is something worth installing, not when a number changes.
 
+## [1.4.0] - 2026-11-28
+
+The pack still would not load after 1.3.0, so this release stops guessing which directive
+threw and rebuilds the configuration around the one thing known to load: the Iris 1.21.5
+template (`ascpixi/minecraft-shader-template`, itself the ShaderLABS Base-330 skeleton).
+Notably, that template ships **no `shaders.properties` at all**, and its programs use
+`RENDERTARGETS`, not `DRAWBUFFERS`.
+
+### Changed
+
+- **`shaders.properties` reduced to six vanilla-feature switches.** Everything removed —
+  `screen`, `screen.*`, `sliders`, `profile.*` and the `#if` block — has one thing in common:
+  each makes Iris look an option name up in the set it discovered from the shader sources,
+  and a name that does not resolve aborts the load with an exception whose message is empty.
+  That is exactly the `No value present` on screen. `blend.*`, `shadow.enabled`, `separateAo`
+  and `oldLighting` went with them: Iris already defaults `gbuffers_water` to the blend this
+  pack needs, and the rest were refinements that are not worth a failed load.
+- **Every program declares `/* RENDERTARGETS: ... */` instead of `/* DRAWBUFFERS: ... */`**,
+  matching the template and every current pack. Iris accepts both spellings, but the modern
+  one is the path that is actually exercised by the pack this was built against.
+- **The in-game settings screen and the three presets are gone for now**, because that screen
+  is precisely what could not load. The tunables remain in `shaders/lib/settings.glsl` as
+  compile-time defaults, and the README lists the four lines to change for the Performance
+  and Visual cost profiles. They return once the pack is confirmed to load.
+
+### Added
+
+- The validator accepts both target-list spellings and checks the target count against the
+  number of declared fragment outputs either way.
+
 ## [1.3.0] - 2026-11-27
 
 This release is about one thing. Selecting the pack made Iris report that it had encountered

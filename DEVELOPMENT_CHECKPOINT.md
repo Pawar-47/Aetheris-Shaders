@@ -8,12 +8,11 @@ work resumes from the exact point it stopped rather than from the beginning.
 
 ---
 
-**Current release:** 1.3.0 (`Aetheris-Shaders-1.3.0.zip`). 1.0.0 was the first release, 1.1.0
-fixed a duplicate uniform that sent the pack back to vanilla rendering, 1.2.0 completed the
-shadow pipeline, and 1.3.0 fixes the apply failure described below. The 1.0.1 tree that was
-written between 1.0.0 and 1.1.0 was never committed and never published, so its two fixes are
-folded into 1.1.0 rather than pretending to be a release of their own; an earlier version of
-this file claimed 1.0.1 had been published and that was wrong.
+**Current release:** 1.4.0 (`Aetheris-Shaders-1.4.0.zip`). 1.0.0 was the first release; 1.1.0
+fixed a duplicate uniform that sent the pack back to vanilla rendering; 1.2.0 completed the
+shadow pipeline; 1.3.0 fixed the option declarations; 1.4.0 stripped the configuration back to
+the shape of the Iris 1.21.5 template because the pack still would not load. The 1.0.1 tree was
+never committed or published, so its fixes live in 1.1.0.
 
 ---
 
@@ -36,14 +35,16 @@ detection path that depended entirely on one file being parsed as expected.
 
 ## Current stage
 
-**1.3.0 implemented, statically validated, still awaiting its first run in Minecraft.**
+**1.4.0 implemented, statically validated, still awaiting its first run in Minecraft.**
 
-The pack has now failed for two different reasons and both were found by reading Iris' own
-source rather than by reasoning about the pack. 1.1.0 was a duplicate uniform, which made Iris
-render vanilla. 1.3.0 is the apply failure: Iris registers a `const` option only when its name
-is in its own whitelist, so twenty of this pack's sliders did not exist as options while
-`shaders.properties` referred to every one of them, and the menu Iris builds at apply time is
-where that threw. No amount of GLSL reading would have shown either one.
+Four releases, three of them chasing a load failure, and the pattern is worth recording: every
+time, the cause was found by reading Iris' own source rather than by reasoning about the pack,
+and every fix removed a construct rather than adding one. 1.1.0 was a duplicate uniform, which
+made Iris render vanilla. 1.3.0 was `const` option declarations, which Iris never registered.
+1.4.0 removes the whole option-UI surface — `screen`, `sliders`, `profile.*`, `#if` — because
+those are the only places Iris resolves an option name, and an unresolved name aborts the load
+with an empty message. The configuration now matches the Iris 1.21.5 template, which loads with
+no `shaders.properties` at all.
 
 Every pass is written and wired up. There is no placeholder, no stubbed function and no
 `TODO` in the shader source. The pack packages into a correctly rooted zip.
@@ -200,6 +201,23 @@ error. That is not the same as knowing the pack works.
       must declare an output, `#if` in shaders.properties must name a real option, and a
       preset value must be one of that option's allowed values.
 
+### 1.4.0 — back to the template
+
+- [x] `shaders.properties` reduced to six vanilla-feature switches. Every option-UI directive
+      removed: `screen`, `screen.*`, `sliders`, `profile.*` and the `#if` block are the only
+      constructs that make Iris resolve an option name, and that resolution is what threw.
+      `blend.*`, `shadow.enabled`, `separateAo` and `oldLighting` went with them as
+      refinements that are not worth a failed load.
+- [x] Every program uses `/* RENDERTARGETS: ... */` instead of `/* DRAWBUFFERS: ... */`,
+      matching the Iris 1.21.5 template.
+- [x] Presets and the in-game settings screen removed for now; the README documents the four
+      lines to change for the other two cost profiles.
+- [x] The validator accepts both target-list spellings.
+- [ ] Restore, one at a time and only after the pack is confirmed to load: `separateAo`,
+      `oldLighting`, the feature blend overrides, then `screen`/`sliders`/`profile.*` for the
+      presets. Each restored piece is a candidate for the failure, so each gets its own
+      verification.
+
 ---
 
 ## Latest successful validation
@@ -313,7 +331,11 @@ In the order they should be done.
 8. **Measure.** Press F3, note frame time at 1280x720, and record it in the README. Then
    decide whether the Balanced preset should move.
 9. **Tune the water** using the table at the end of `docs/PERFORMANCE.md`.
-10. **Then** consider 1.3.0: bloom if the budget allows it after measurement, or a
+10. **Then** restore what 1.4.0 removed, one piece at a time, checking that the pack still
+    loads after each: `separateAo`, then `oldLighting` and the blend overrides, then
+    `screen`/`sliders`/`profile.*` for the presets. The last is the one that failed, so it
+    goes last and only against an option set that is known to resolve.
+11. After that, consider 1.5.0: bloom if the budget allows it after measurement, or a
     half-resolution cloud march into a separate buffer if the sky turns out to be the
     bottleneck.
 

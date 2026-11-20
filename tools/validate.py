@@ -223,7 +223,9 @@ UNIFORM_RE = re.compile(r'^\s*uniform\s+(\w+)\s+(\w+)\s*;', re.MULTILINE)
 OUT_RE = re.compile(r'^\s*(?:flat\s+|smooth\s+|noperspective\s+)?out\s+(\w+)\s+(\w+)\s*;', re.MULTILINE)
 IN_RE = re.compile(r'^\s*(?:flat\s+|smooth\s+|noperspective\s+)?in\s+(\w+)\s+(\w*)\s*;', re.MULTILINE)
 LAYOUT_OUT_RE = re.compile(r'layout\s*\(\s*location\s*=\s*(\d+)\s*\)\s*out\s+\w+\s+\w+\s*;')
-DRAWBUFFERS_RE = re.compile(r'/\*\s*DRAWBUFFERS\s*:\s*([0-9]+)\s*\*/')
+# Iris accepts both spellings. RENDERTARGETS is the current one and takes a comma separated
+# list; DRAWBUFFERS is the OptiFine-era form and packs the digits together ("02").
+RENDERTARGETS_RE = re.compile(r'/\*\s*(?:RENDERTARGETS|DRAWBUFFERS)\s*:\s*([0-9,\s]*)\*/')
 
 # Globals in this pack sit at column 0 and function locals are indented, so anchoring
 # at column 0 keeps a `const float a` inside one function from colliding with the same
@@ -371,14 +373,19 @@ def check_program(name, vsh_path, fsh_path):
 
     stripped_fsh = strip_comments(unit_fsh)
     outputs = len(LAYOUT_OUT_RE.findall(stripped_fsh))
-    match = DRAWBUFFERS_RE.search(read_text(fsh_path))
+    match = RENDERTARGETS_RE.search(read_text(fsh_path))
     if match:
-        targets = len(match.group(1))
+        raw = match.group(1)
+        if "," in raw:
+            targets = len([t for t in raw.split(",") if t.strip()])
+        else:
+            # Legacy DRAWBUFFERS packs the indices together: "02" is two targets.
+            targets = len(raw.strip())
         if targets != outputs:
-            fail("%s: DRAWBUFFERS lists %d target(s) but the fragment stage declares %d output(s)"
-                 % (label, targets, outputs))
+            fail("%s: the render target list names %d target(s) but the fragment stage "
+                 "declares %d output(s)" % (label, targets, outputs))
     elif outputs > 1:
-        fail("%s: %d outputs but no DRAWBUFFERS line" % (label, outputs))
+        fail("%s: %d outputs but no RENDERTARGETS line" % (label, outputs))
 
     if outputs < 1:
         fail("%s: the fragment stage declares no output at all; every program Iris runs against a "
