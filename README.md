@@ -11,12 +11,12 @@ particular way of handling light, atmosphere and water, this pack studies that p
 and re-derives its own version of it at a fraction of the cost.
 
 **Branch build: 1.6.1 (perf/full-feature-performance).** GitHub Actions run
-[44800409615](../../actions/runs/44800409615) completed successfully after the compact HDR
-buffer change: static validation, all 46 GLSL stages, block-ID/option checks, buffer-format
-guard and packaging passed. The repository's published v1.6.1 tag points to an older commit
-on main and does **not** contain this branch's feature-preserving pipeline; use the branch's
-CI artifact to test these changes. Iris loading, visual output and frame rate on the target
-laptop remain untested. No new release has been published from this branch. See
+[44801267620](../../actions/runs/44801267620) completed successfully after the unsigned-HDR
+bloom guard: static validation, all 46 GLSL stages, block-ID/option checks, compact buffer
+format guard and packaging passed. The repository's published v1.6.1 tag points to an older
+commit on main and does **not** contain this branch's feature-preserving pipeline; use the
+branch's CI artifact to test these changes. Iris loading, visual output and frame rate on the
+target laptop remain untested. No new release has been published from this branch. See
 [verification status](#what-has-and-has-not-been-verified).
 
 ### Iris, not OptiFine
@@ -277,8 +277,8 @@ block IDs; it is not PBR and requires no companion resource pack.
 
 ## What has and has not been verified
 
-The evidence below is tied to commit `4395226889b8841fc89359a492eaa8f16b2ff183`
-and GitHub Actions run [44800409615](../../actions/runs/44800409615), which completed
+The evidence below is tied to commit `407507b29c1eef7a8e443afeab1857c3f25bdb99`
+and GitHub Actions run [44801267620](../../actions/runs/44801267620), which completed
 **successfully**.
 
 **Completed CI checks**
@@ -290,9 +290,11 @@ and GitHub Actions run [44800409615](../../actions/runs/44800409615), which comp
 - The validator confirms both low-resolution effects use the compact
   `R11F_G11F_B10F` format, both buffers are quarter resolution, and the
   composite1 → composite2 → final route is intact.
+- The bloom extraction clamps radiance to non-negative RGB before writing the unsigned
+  packed-HDR buffers.
 - Packaging succeeded. The CI artifact contains the installable
   `Aetheris-Shaders-1.6.1.zip`; the inner ZIP has 85 entries (81 files and 4 directories),
-  146,267 bytes uncompressed. The uploaded artifact is 64,031 bytes.
+  146,612 bytes uncompressed. The uploaded artifact is 64,452 bytes.
 - The package contains no companion resource/PBR pack.
 
 **Not verified**

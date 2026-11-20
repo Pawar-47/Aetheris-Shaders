@@ -4,8 +4,8 @@
 
 - Repository: Pawar-47/Aetheris-Shaders
 - Work branch: perf/full-feature-performance
-- Latest code-validation commit: 4395226889b8841fc89359a492eaa8f16b2ff183
-- Latest README and performance documentation are updated in that same commit.
+- Latest code commit: 407507b29c1eef7a8e443afeab1857c3f25bdb99
+- Latest successful code-validation run: 44801267620
 - Version file: 1.6.1
 - Default branch: main; it has not been changed.
 - The published v1.6.1 tag points to e2f7bb73c7848576895ae8041e8237e31970f1f3 on main. It predates this branch's feature-preserving pipeline.
@@ -47,6 +47,8 @@
 - Both low-resolution effect buffers use `R11F_G11F_B10F` (32-bit packed HDR) rather than
   `RGBA16F` (64-bit); their non-negative RGB effect energy needs no alpha, halving their
   storage and read/write traffic. The validator guards the format declarations.
+- Bloom extraction clamps channels to non-negative values before writing the unsigned HDR
+  format, preventing silent clipping of negative components.
 - Clouds reject empty/horizon regions early and avoid a second noise octave when the primary
   density cannot contribute.
 - Material gloss is a forward-lighting lobe on tagged blocks; no PBR/resource pack is required.
@@ -57,9 +59,9 @@
 
 ## CI result
 
-[GitHub Actions run 44800409615](https://github.com/Pawar-47/Aetheris-Shaders/actions/runs/44800409615)
+[GitHub Actions run 44801267620](https://github.com/Pawar-47/Aetheris-Shaders/actions/runs/44801267620)
 
-- Tested commit: 4395226889b8841fc89359a492eaa8f16b2ff183
+- Tested commit: 407507b29c1eef7a8e443afeab1857c3f25bdb99
 - Final conclusion: **completed / success**
 - Static validation: passed.
 - GLSL compile and program-link check: passed; all 46 stages compile and every program links.
@@ -67,8 +69,8 @@
 - Option-label check: passed.
 - Compact effect-buffer format and quarter-resolution checks: passed.
 - Packaging: passed; `Aetheris-Shaders-1.6.1.zip` generated.
-- Artifact upload: passed; artifact ID 14660642752 (64,031 bytes). The nested installable ZIP
-  contains 81 files and 4 directories (146,267 uncompressed bytes).
+- Artifact upload: passed; artifact ID 14660097618 (64,452 bytes). The nested installable ZIP
+  contains 81 files and 4 directories (146,612 uncompressed bytes).
 
 ## Remaining verification boundary
 
@@ -79,7 +81,7 @@ has been performed. Do not claim that the pack is runtime-tested or tuned to mea
 
 ## Next steps
 
-1. Install the exact artifact from run 44800409615 in the target SK Launcher instance with
+1. Install the exact artifact from run 44801267620 in the target SK Launcher instance with
    Iris 1.8.x and Sodium. Enable Iris debug mode before applying it.
 2. If it fails, diagnose the first concrete log or patched-shader error; do not guess from an
    empty on-screen details pane.
