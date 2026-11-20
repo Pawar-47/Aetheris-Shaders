@@ -36,6 +36,14 @@ jobs:
       - name: Static validation
         run: python3 tools/validate.py
 
+      # The release gate has to include the compiler check. Without it a pack that does not
+      # compile can still be published, which is precisely how 1.5.2 shipped.
+      - name: Install glslang
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq glslang-tools
+
+      - name: GLSL compile check
+        run: python3 tools/glsl_check.py
+
       - name: Read version
         id: version
         run: echo "version=$(tr -d ' \t\r\n' < VERSION)" >> "$GITHUB_OUTPUT"
