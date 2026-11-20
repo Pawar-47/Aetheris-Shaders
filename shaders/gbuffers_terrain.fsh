@@ -2,10 +2,8 @@
 
 /* RENDERTARGETS: 0 */
 
-/*
-const int colortex0Format = RGBA16F;
-const int colortex1Format = RGBA16F;
-const int colortex2Format = RGBA16F;
-*/
+/* Buffer formats are declared once, as real code, in lib/body/composite.fsh. Iris reads
+ * them from the shader source; keeping them in one place means there is exactly one
+ * declaration per attachment and nothing to disagree with. */
 
 #include "/lib/body/opaque.fsh"

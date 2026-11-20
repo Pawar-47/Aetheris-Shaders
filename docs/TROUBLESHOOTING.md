@@ -1,3 +1,23 @@
+## First: the probe pack
+
+Every release attaches two zips. `Aetheris-Probe-<version>.zip` is two files, one program,
+no `shaders.properties`, no `#include`, no block map, no language file — the smallest thing
+that can still be called a shader pack, shaped exactly like the Iris 1.21.5 template.
+
+Install it the same way and look at the world:
+
+- **The world is flat and brightly lit, no shadows, textures intact** → the probe loaded.
+  Iris works, your install works, and the fault is inside Aetheris. The log will say where
+  (see below).
+- **Iris still reports a problem** → the fault is not Aetheris. It is the Iris version, the
+  Minecraft version, or the folder the zip went into. Check that Iris and Sodium are both
+  the builds for *your* Minecraft version, and that the zip is in the `shaderpacks` folder of
+  the instance you are actually launching.
+- **The pack appears in the list but the world looks untouched** → it loaded and did
+  nothing, which is also information: the probe's whole point is that a loaded pack cannot
+  look vanilla.
+
+
 # Troubleshooting
 
 ## "Iris has encountered a problem while applying", and the details pane shows nothing

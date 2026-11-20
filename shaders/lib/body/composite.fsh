@@ -6,6 +6,21 @@
 #include "/lib/ssao.glsl"
 #include "/lib/water_composite.glsl"
 
+/* Buffer formats, declared once and as real code.
+ *
+ * Iris reads these out of the shader source. They used to live inside a block comment at
+ * the top of four different programs, which meant the same attachment was declared from
+ * four places and a loader that did not look inside comments would have silently given
+ * every buffer the default RGBA8. Declaring them here, the way the Iris 1.21.5 template
+ * does, means there is exactly one declaration per attachment and nothing to disagree.
+ *
+ * Both must be half float. colortex0 carries the lit scene, whose values deliberately go
+ * above 1.0 so the tonemapper has a highlight to roll off; colortex2 carries the packed
+ * water surface normal, which loses about 40% of its finest detail to 8 bit quantisation.
+ */
+const int colortex0Format = RGBA16F;
+const int colortex2Format = RGBA16F;
+
 /* The composite pass.
  *
  * This is where the pack stops being forward. Three kinds of pixel arrive here:

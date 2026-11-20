@@ -9,7 +9,7 @@ integrated GPU, with BSL Shaders as its artistic reference. Where BSL's look com
 particular way of handling light, atmosphere and water, this pack studies that principle
 and re-derives its own version of it at a fraction of the cost.
 
-**Status: 1.3.0. Statically validated, not yet run in a game.** See
+**Status: 1.5.0. Statically validated, not yet run in a game.** See
 [What has and has not been verified](#what-has-and-has-not-been-verified) before you
 expect anything from it. If Iris refuses to apply the pack and shows an empty error, see
 [Troubleshooting](docs/TROUBLESHOOTING.md) — that page names the log lines that actually
@@ -54,6 +54,12 @@ against, not a compromise between a laptop and a desktop.
    in `logs/latest.log` point at a real file and line. See
    [Troubleshooting](docs/TROUBLESHOOTING.md).
 
+If Iris refuses to apply the pack, install `Aetheris-Probe-<version>.zip` from the same
+release first. It is two files and no configuration, and it answers one question: whether
+*any* shader pack loads on your setup at all. If the probe loads and Aetheris does not, the
+fault is here and `logs/latest.log` will name it; if the probe also fails, the problem is the
+Iris install, the Minecraft version, or where the zip was placed.
+
 No resource pack is required and none is provided. Every effect in this pack is
 achieved in shader code over vanilla assets.
 
@@ -71,27 +77,23 @@ These are outside the pack and are the difference between playable and not on th
 
 ---
 
-## Presets — removed until the pack is confirmed to load
+## Presets
 
-There were three presets here, exposed through the Shader Pack Settings screen. They are
-gone, deliberately, and this is the honest reason: that screen is built from `screen`,
-`sliders` and `profile.*` in `shaders.properties`, and Iris resolves every name in those
-lists against the option set it discovered from the shader sources. For this pack that
-resolution failed at apply time and took the whole pack down with an empty error. Rather
-than guess which directive was responsible, the configuration now carries none of them.
+Three real presets, each a genuinely different rendering cost and not a relabelling. They
+are in `shaders.properties` as `profile.*` lines; `Performance` also flips
+`shadow.enabled` through an `#if SHADOWS` conditional, so it removes the shadow render pass
+rather than leaving it running unsampled.
 
-The tunables are still in `shaders/lib/settings.glsl` as compile-time defaults, so nothing
-in the renderer changed — only the way you reach them. The three presets come back as soon
-as someone reports the pack loading, and not before.
+| Preset | Shadows | AO | Water reflections | Clouds | FXAA |
+|---|---|---|---|---|---|
+| **Performance** | pass disabled entirely | off | off | 5 steps, no detail octave, no cirrus | off |
+| **Balanced** (default) | 2048, 6 taps, 96 blocks | 6 samples | 8 steps | 8 steps, detail, cirrus | on |
+| **Visual** | 2048, 9 taps, 128 blocks | 9 samples | 10 steps | 12 steps, detail, cirrus | on |
 
-If you want the Performance or Visual cost profile in the meantime, change these four
-lines in `shaders/lib/settings.glsl`:
-
-| | `SHADOWS` | `SHADOW_SAMPLES` | `WATER_REFLECTIONS` | `CLOUD_STEPS` |
-|---|---|---|---|---|
-| Performance | `0` | `4` | `0` | `5` |
-| Balanced (default) | `1` | `6` | `1` | `8` |
-| Visual | `1` | `9` | `1` | `12` |
+Performance removes whole passes rather than shaving quality everywhere: no shadow render
+pass, no ambient occlusion, no reflection march, no antialiasing pass. The pack still looks
+like Aetheris, because the things that define its look — the atmosphere model, the sky, the
+water body colour, the wave normals, the sun disc, the tone curve — are all still there.
 
 ---
 

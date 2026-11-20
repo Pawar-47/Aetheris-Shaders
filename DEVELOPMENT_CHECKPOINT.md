@@ -8,11 +8,12 @@ work resumes from the exact point it stopped rather than from the beginning.
 
 ---
 
-**Current release:** 1.4.0 (`Aetheris-Shaders-1.4.0.zip`). 1.0.0 was the first release; 1.1.0
-fixed a duplicate uniform that sent the pack back to vanilla rendering; 1.2.0 completed the
-shadow pipeline; 1.3.0 fixed the option declarations; 1.4.0 stripped the configuration back to
-the shape of the Iris 1.21.5 template because the pack still would not load. The 1.0.1 tree was
-never committed or published, so its fixes live in 1.1.0.
+**Current release:** 1.5.0 (`Aetheris-Shaders-1.5.0.zip`).
+1.0.0 first release; 1.1.0 fixed a duplicate uniform that sent the pack back to vanilla
+rendering; 1.2.0 completed the shadow pipeline; 1.3.0 fixed the option declarations; 1.4.0
+stripped the configuration back to the shape of the Iris 1.21.5 template; 1.4.1 stops guessing
+and adds a probe pack so the next report is a measurement rather than a symptom. The 1.0.1 tree
+was never committed or published, so its fixes live in 1.1.0.
 
 ---
 
@@ -35,7 +36,7 @@ detection path that depended entirely on one file being parsed as expected.
 
 ## Current stage
 
-**1.4.0 implemented, statically validated, still awaiting its first run in Minecraft.**
+**1.5.0 implemented, statically validated, still awaiting its first run in Minecraft.**
 
 Four releases, three of them chasing a load failure, and the pattern is worth recording: every
 time, the cause was found by reading Iris' own source rather than by reasoning about the pack,
@@ -217,6 +218,43 @@ error. That is not the same as knowing the pack works.
       `oldLighting`, the feature blend overrides, then `screen`/`sliders`/`profile.*` for the
       presets. Each restored piece is a candidate for the failure, so each gets its own
       verification.
+
+### 1.5.0 — compared against Nova Shaders
+
+Nova Shaders loads on the target machine and Aetheris does not, so the pack was compared to
+it file by file. That settled three things:
+
+- [x] **One colour buffer, not two.** Nova's `composite` declares `RENDERTARGETS: 0`, reads
+      `colortex0` and writes `colortex0`; the loader flips between physical textures, so it is
+      a ping-pong. Aetheris now does the same and `final` reads `colortex0`. `colortex1` is
+      gone, and with it the possibility of the last pass reading an unwritten attachment.
+- [x] **Buffer formats declared once, as real code**, in `lib/body/composite.fsh`, instead of
+      in a block comment repeated across four programs.
+- [x] **The archive carries `pack.mcmeta`, `LICENSE` and the notices**, and `package.sh`
+      fails if any is missing. That is Nova's layout, asserted by its own build script.
+- [x] **The presets and settings screen are back.** 1.4.0 removed them on the theory that the
+      option menu caused the failure; Nova ships the same `screen`/`sliders`/`profile.*`/`#if`
+      directives and loads, so that theory was wrong.
+- [x] `shaders.properties` no longer relies on `separateAo`, `oldLighting` or `blend.*`.
+
+### 1.4.1 — making the failure measurable
+
+- [x] A probe pack ships with every release: two files, one program, no `shaders.properties`,
+      no `#include`, no block map, no language file — the Iris 1.21.5 template's
+      `gbuffers_terrain` and nothing else. It renders unlit, so a successful load cannot be
+      mistaken for "no change".
+- [x] `tools/package.sh` emits `Aetheris-Probe-<version>.zip` next to the real pack, and the
+      release workflow attaches both.
+- [x] `docs/TROUBLESHOOTING.md` opens with the probe test and what each of the three outcomes
+      means.
+- [ ] **Waiting on one data point:** does the probe load? If yes, the fault is in this pack and
+      `latest.log` will name the class and line. If no, the fault is the install and no further
+      change to these shaders can fix it.
+- [ ] Four hypotheses have been tried and disproven in sequence: the duplicate uniform (1.1.0,
+      real defect, not the blocker), the `const` option declarations (1.3.0, real defect, not
+      the blocker), the option-UI directives in `shaders.properties` (1.4.0), and
+      `DRAWBUFFERS` vs `RENDERTARGETS` (1.4.0). The lesson is that reading the source has
+      produced real fixes but cannot substitute for one log line.
 
 ---
 

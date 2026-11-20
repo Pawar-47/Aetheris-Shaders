@@ -6,6 +6,56 @@ All notable changes to Aetheris Shaders are recorded here. The format follows
 
 A release is made when there is something worth installing, not when a number changes.
 
+## [1.5.0] - 2026-11-30
+
+The pack still would not apply, so this release was built by comparing it file by file
+against **Nova Shaders**, which loads on the same machine. That comparison settled two things
+and corrected one wrong assumption.
+
+### Fixed
+
+- **The colour pipeline uses one buffer now, the way Nova and the Iris 1.21.5 template do.**
+  `composite` declares `RENDERTARGETS: 0`, reads `colortex0` and writes `colortex0` — the
+  loader keeps two physical textures per attachment and flips them, so that is a ping-pong
+  rather than a feedback loop — and `final` reads `colortex0`. There is no `colortex1` any
+  more, and therefore no way for the last pass to read an attachment nothing has written.
+- **Buffer formats are declared once, as real code**, in `lib/body/composite.fsh`. They used
+  to sit inside a block comment repeated across four programs: a loader that does not read
+  inside comments would have silently given every buffer the default RGBA8, and four
+  declarations of the same attachment are four chances to disagree.
+- **The archive now holds `pack.mcmeta`, `LICENSE` and the notices** alongside `shaders/`,
+  and `tools/package.sh` fails the build if any of them is missing. That is the layout Nova
+  ships and the one its own build script asserts.
+
+### Changed
+
+- **The presets, the settings screen and the `#if SHADOWS` conditional are back.** 1.4.0
+  removed them on the theory that Iris' option menu was the failure. Nova ships the same
+  `screen`/`sliders`/`profile.*`/`#if` set and loads, so the theory was wrong and the feature
+  is restored, along with the brief's three cost profiles.
+- The probe pack is no longer built or shipped.
+
+## [1.4.1] - 2026-11-29
+
+The pack still fails to apply after 1.4.0, and four attempts at diagnosing it from the source
+have not converged. This release stops adding hypotheses and makes the failure measurable
+instead.
+
+### Added
+
+- **A probe pack.** Every release now attaches `Aetheris-Probe-<version>.zip` alongside the
+  real pack: one program, two files, no `shaders.properties`, no `#include`, no block map, no
+  language file — the smallest thing that can be called a shader pack, shaped exactly like the
+  Iris 1.21.5 template. It renders the world unlit, so a successful load is unmistakable
+  rather than "looks about the same". If the probe loads and Aetheris does not, the fault is
+  here; if the probe also fails, the fault is the install.
+- `docs/TROUBLESHOOTING.md` opens with that test and what each outcome means.
+
+### Changed
+
+- Nothing in the renderer. Deliberately: this release exists to get one real data point
+  rather than to change behaviour on another guess.
+
 ## [1.4.0] - 2026-11-28
 
 The pack still would not load after 1.3.0, so this release stops guessing which directive
