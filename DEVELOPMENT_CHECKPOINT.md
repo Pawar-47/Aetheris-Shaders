@@ -103,15 +103,21 @@ in the README rather than hidden.
 
 ## Latest successful validation
 
-**Nothing has been run yet.** The pack was written in an environment with no shell, no
-compiler and no Minecraft. The first validation run is the CI job on the initial push.
+**CI green on `main`.** The `Validate` workflow passes: static validation, block ID
+consistency, option labels, packaging and artifact upload.
 
-Update this section with the CI result, the run number and the date as soon as it is known.
-Until then, treat the "Verified in CI" list in the README as *what the validator checks*,
-not as *what has passed*.
+The validator earned its place on the first three runs. It found:
 
-If CI fails, the failure list is the to-do list. Do not mark anything above as verified
-until CI is green.
+1. Its own include-expansion bug: it inlined each guarded file once per sibling, which
+   made `shadowMapResolution` look like it was declared nine times over.
+2. A real compile error — `water_composite.glsl` called `aetherisUnpackWaterNormal`
+   without including `water.glsl`. The composite pass would not have built, and the whole
+   pack would have silently fallen back to vanilla rendering.
+3. A real interface gap — `composite.vsh` and `final.vsh` were the only stages in the pack
+   carrying no option constants, because `uniforms.glsl` did not include `settings.glsl`.
+
+All three are fixed. **What is still not verified is everything below "Unverified by
+nature": no GPU has compiled this and no frame has been rendered.**
 
 ---
 

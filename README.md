@@ -200,7 +200,10 @@ with a per-pixel rotated nine-tap spiral.
 
 This is important, and it is stated plainly rather than buried.
 
-**Verified in CI**
+**Verified in CI** — this passes on `main`. It has already earned its keep: during
+development it found two genuine compile errors (a missing include in the composite path,
+and two vertex stages carrying no option constants) that would have sent the whole pack
+back to vanilla rendering.
 
 - Every `#include` resolves to a file that exists.
 - Braces and `#if`/`#endif` balance in every translation unit.

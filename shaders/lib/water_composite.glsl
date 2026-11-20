@@ -217,7 +217,11 @@ vec3 aetherisWaterSurface(vec2 uv, vec4 waterData, AetherisSky sky, vec3 sceneCo
     // ------------------------------------------------------------------ glitter
     // Two lobes: a tight one for the glints that ride individual wave crests, and a
     // broad one that gives the whole surface a sheen towards a low sun.
-    vec3 halfDir = normalize(toEye + sky.lightDir);
+    //
+    // The epsilon is not cosmetic. toEye + lightDir is exactly zero when the eye is
+    // opposite the light relative to the surface, and normalising that is undefined;
+    // one NaN spreads through the tonemapper and blacks out the frame.
+    vec3 halfDir = normalize(toEye + sky.lightDir + vec3(0.0, 1.0e-5, 0.0));
     float NdotH = saturate(dot(normal, halfDir));
     float tight = NdotH * NdotH;
     tight *= tight;

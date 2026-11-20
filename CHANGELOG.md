@@ -78,6 +78,16 @@ composite) plus a final grade pass, built and tuned for an Intel HD Graphics 550
 - Three presets that differ in rendering cost, not in labels.
 - `block.properties` ID map with a graceful fallback if it is ever unreadable.
 
+### Validation
+
+- Automated static validation passes on `main` (Ubuntu, Python 3): includes, brace and
+  preprocessor balance, function resolution, sampler validity, cross-stage varying
+  agreement, `DRAWBUFFERS` counts, option consistency, block ID agreement, packaging.
+- It found two genuine compile errors before this release, both fixed:
+  `water_composite.glsl` called `aetherisUnpackWaterNormal` without including
+  `water.glsl`, and `composite.vsh` / `final.vsh` carried no option constants because
+  `uniforms.glsl` did not include `settings.glsl`.
+
 ### Known limitations
 
 - No bloom. A two-pass blur chain is not affordable at 720p on 24 execution units, and a
