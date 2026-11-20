@@ -1,221 +1,162 @@
-# Performance notes: why this pack looks like this
+# Performance design: preserve effects, reduce their cost
 
-The target is an Intel HD Graphics 5500: Broadwell Gen8, 24 execution units, 16 wide SIMD,
-0.30 to 0.90 GHz, no dedicated memory. It shares a roughly 25.6 GB/s bus with a Core
-i3-5005U and its 8 GB of DDR3.
+## Target and evidence
 
-That works out to somewhere around 0.4 to 0.7 TFLOP/s at full clocks, with texture
-throughput as the harder limit. The CPU side matters too: two cores at 2.0 GHz with no
-turbo is not much room to build chunks in.
+The target is one laptop: Intel Core i3-5005U (2 cores / 4 threads, 2.00 GHz), Intel HD
+Graphics 5500 (Broadwell Gen8), 8 GB RAM, Linux Mint, Minecraft Java 1.21.5, Iris 1.8.x
+and Sodium.
 
-This file records the arithmetic and the decisions that follow from it, so that each
-choice can be checked rather than taken on trust.
+The HD 5500 shares system memory with the CPU. The often-quoted 25.6 GB/s is a theoretical
+dual-channel peak, not a measured bandwidth figure for this laptop. The GPU is an older
+integrated part, so both memory traffic and texture sampling matter. The CPU also has only
+two physical cores; chunk building and draw submission compete with the game and driver.
 
----
+This document describes the algorithms and configured budgets. It does **not** claim a
+measured frame rate or a guaranteed millisecond budget. No benchmark from the target laptop
+has been recorded yet.
 
-## The fill rate budget
+## Design rule
 
-At 1280x720 there are 921,600 pixels. At 60 fps a frame is 16.7 ms, and a shader pack has
-to leave most of that to the game, to Sodium's chunk draws, to the shadow pass geometry and
-to the driver. A realistic target is **4 to 6 ms of fragment work produced by the pack
-itself**, which on this part is roughly **2 to 3 GFLOP per frame** at best.
+The Performance profile must retain the visual feature set. It may reduce resolution,
+distance, sample count, strength and iteration count, but it must not achieve its speed by
+turning off:
 
-Divide that by 921,600 pixels and the whole screen has a budget of about **2,000 to 3,000
-arithmetic operations per pixel across every pass**, and considerably fewer texture fetches
-because Gen8 has 4 texture units and they are the bottleneck well before the ALU is.
+- dynamic shadows and near-field contact darkening;
+- screen-space ambient occlusion;
+- water refraction, absorption and reflections;
+- procedural clouds, cloud detail and cirrus;
+- FXAA;
+- bloom;
+- screen-space light shafts;
+- material gloss;
+- vegetation wind and water waves.
 
-That single number explains nearly every decision in this pack.
+The validator checks that the Performance profile leaves these effects enabled.
 
----
+## Rendering pipeline
 
-## Decision: three passes, not seven
+1. **Shadow pass:** one shadow depth map. The low-end profile uses 1024 resolution and a
+   64-block shadow distance. It uses four depth taps per shadowed fragment. Shadow culling
+   remains enabled; no second cascade is rendered.
+2. **Geometry / gbuffers:** forward lighting is evaluated where the surface albedo is
+   already available. This avoids writing and rereading full-resolution albedo and normal
+   G-buffers. The material gloss path uses a bounded analytic highlight for selected blocks.
+3. **Composite:** sky and clouds are drawn for sky pixels; water is shaded only where its
+   mask is set; AO is applied only to scene pixels and fades out with distance.
+4. **Composite1 and composite2:** bloom and light shafts share two intermediate buffers at
+   25% of screen width and height. That is 6.25% of the full-resolution pixel count. The
+   first pass extracts bright regions and samples the projected sun ray; the second applies
+   a five-tap blur.
+5. **Final:** FXAA is applied to the scene, the low-resolution effects buffer is sampled,
+   then exposure, tone mapping, colour grading and display encoding are performed.
 
-The pack renders in this order:
+The extra post-processing stages are deliberately low resolution. They are not full-screen
+multi-pass blur chains, and they do not require a companion resource pack.
 
-1. **shadow** — one depth map, one geometry submission
-2. **gbuffers_*** — one geometry submission, forward lit
-3. **composite** — sky, clouds, water, ambient occlusion
-4. **final** — FXAA, tonemap, grade
+## Per-effect budgets in Performance
 
-Four fullscreen-ish operations, two of which are fullscreen. There is no bloom chain (three
-to five passes), no volumetric light pass, no deferred geometry pass, no temporal
-antialiasing with its history buffer, and no depth of field.
+| Effect | Performance setting | Cost-control method |
+|---|---:|---|
+| Shadows | 1024 map, 64 blocks, 4 taps | One map, short range, compact kernel, shadow culling |
+| Contact darkening | Reuses the same 4 shadow reads | No separate contact-shadow sampling loop |
+| SSAO | 4 samples | Reconstruct normal with screen-space derivatives instead of four neighbouring depth reads; fade beyond 46 blocks |
+| Water reflections | 5 march steps | Bounded geometric step growth; water pixels only; sky fallback on a miss |
+| Water refraction / absorption | Enabled | Existing water data buffer and bounded per-pixel work |
+| Cumulus clouds | 5 march steps | Fixed loop bound, early termination on low transmittance, horizon LOD |
+| Cloud detail and cirrus | Enabled | Reduced-cost detail evaluation and early horizon rejection |
+| Vegetation wind | Enabled | Shared deterministic wind function for visible and shadow passes |
+| Water waves | Enabled | Analytic wave normals; no vertex displacement |
+| FXAA | Enabled | Single final pass, no temporal history buffer |
+| Bloom | Enabled | Bright extraction and blur in quarter-width/quarter-height buffers |
+| Light shafts | 4 radial samples | Screen-space sky visibility checks in the same low-resolution pass |
+| Material gloss | Enabled, strength 0.25 | Multiply-based Blinn-Phong highlight, restricted to mapped block IDs |
 
-A 720p fullscreen pass that fetches one texel per pixel already costs about 0.9 million
-fetches. Four extra fullscreen passes is 3.7 million extra fetches before any of them does
-anything interesting. That is not affordable here.
+The values are compile-time shader options exposed through Iris' settings screen. They are
+not adaptive FPS controls: a shaderpack cannot be assumed to have reliable access to a
+frame-time feedback controller. Choose a profile or adjust its exposed values manually.
 
----
+## Details and limitations
 
-## Decision: forward lighting, not deferred
+### Shadows
 
-Lighting happens in the geometry pass, where the albedo already is.
+A single map avoids the geometry submission cost of cascades. The Performance profile uses
+a 1024 map and 64-block distance with four taps. The four low-cost taps use a symmetric
+2x2 kernel; higher profiles use more samples and per-pixel rotation. The same depth reads
+also estimate the near-field contact term, avoiding a second four-tap loop.
 
-Cost of deferred instead:
+This is still a real shadow pass. It is not replaced with fake vertex shading or disabled
+to obtain the Performance preset.
 
-- A full resolution albedo buffer write in geometry, then a full resolution read in
-  composite. At 1280x720 with RGBA16F that is 7.4 MB written plus 7.4 MB read **per frame**
-  on a 25.6 GB/s bus shared with the CPU. Roughly 0.6 ms of pure bandwidth, before anything
-  is computed.
-- A full resolution normal buffer, same again.
-- A view position reconstruction per pixel in the lighting pass.
-- The shadow lookup happens in the deferred pass, so it happens once per *pixel* rather
-  than once per *fragment*, which is a win — but only where overdraw is high, and Minecraft
-  terrain overdraw is low.
+### Ambient occlusion
 
-What forward gives up is screen space ambient occlusion applied before lighting. AO is
-applied in composite as a multiplier over the lit result, which cannot distinguish sunlight
-from ambient. That is a real inaccuracy and it is accepted: it is a second order error next
-to the bandwidth it saves.
+AO remains enabled with four samples. The view-space centre position is reconstructed once,
+and its derivatives supply a normal estimate. This removes four neighbouring depth-buffer
+reads compared with the earlier finite-difference implementation. A footprint guard rejects
+unstable normals at hard silhouettes, and the effect fades out before distant fog dominates.
 
-AO is additionally **faded out completely by 46 blocks**, so most of a typical frame skips
-it entirely — a single depth fetch and a branch.
+### Water
 
----
+Refraction, channel-dependent absorption, in-scattering, Fresnel and reflections remain.
+The Performance profile bounds the screen-space reflection march to five steps. A ray that
+misses or leaves the screen falls back to the analytic sky reflection, including a cheap
+single-sample cloud approximation. This keeps the water reflective without running a full
+cloud march for every reflected ray.
 
-## Decision: bounded loops the user can turn down
+### Clouds
 
-Every loop in the pack is bounded by a constant, and every one of those constants is
-exposed:
+The cloud slab still uses front-to-back transmittance accumulation. Five fixed steps are
+used in Performance; detail erosion and the high cirrus veil remain enabled. The horizon
+cross-fades to a broad low-frequency field so a coarse march does not turn distant clouds
+into crawling dots. The loop is statically bounded; no unbounded while loop is used.
 
-| Loop | Balanced | Cost |
-|---|---|---|
-| Shadow taps | 6 | 6 shadow fetches per lit, shadowed fragment |
-| AO samples | 6 | ~10 depth fetches per pixel within 46 blocks |
-| Reflection steps | 8 | 8 depth fetches + 1 colour fetch, water pixels only |
-| Cloud steps | 8 | 8 density evaluations, sky pixels only |
+### Bloom and light shafts
 
-None of them use a `while` with an early out as the primary control, because the compiler
-cannot bound a `while` and the branch cost on Gen8 is not free. Early outs exist inside the
-loops (`break` when transmittance is negligible, `continue` when a sample is off screen) but
-the trip count the compiler sees is constant.
+Both effects share two buffers configured to 0.25 x 0.25 of the display dimensions. At
+1280x720, each is 320x180 pixels, not 1280x720. Bloom extracts values above a configurable
+brightness threshold and the second pass softens them with five texture taps.
 
----
+The light-shaft effect projects the sun into screen space and takes four samples along the
+ray from each low-resolution output pixel. Samples contribute only when the depth buffer
+indicates visible sky and the sampled scene colour is bright enough. This is a deliberately
+cheap **screen-space approximation** of volumetric light shafts. It is not a physical 3D
+volume integration, and it does not model light scattering through every world-space voxel.
 
-## Decision: work is skipped by region, not just by quality setting
+### Material gloss
 
-The composite pass visits three kinds of pixel and does very different work on each:
+A curated material ID maps selected metal and polished blocks to a simple Blinn-Phong
+highlight. The exponent is evaluated with multiplies rather than a per-fragment pow.
+This adds a controlled specular cue without PBR texture maps, extra resource packs or
+additional geometry passes. It is not physically based metal rendering.
 
-- **Sky** (depth = 1): the dome, clouds. Expensive but it is the point of the pack.
-- **Water** (flagged in `colortex2`): full surface shading. Only water pixels pay.
-- **Opaque** (everything else): one texture fetch, an AO lookup if within 46 blocks, done.
-  **No fog** — fog was applied forward in the geometry pass, where the albedo exists and
-  where it happens once per visible fragment rather than once per pixel behind overdraw.
+### Anti-aliasing
 
-That last line is the whole performance story at a glance. Most of a typical frame costs one
-fetch.
+FXAA remains enabled in Performance. Temporal AA is not implemented: it would require
+history buffers, reprojection and rejection logic, and can ghost moving foliage and water.
+The shader instead uses FXAA in the final pass and spatial dithering where appropriate.
 
-Clouds and reflection rays are both gated on the branch that reaches them, and both
-evaluate their expensive phase function only after a sample proves there is density or a
-hit.
+## Profiles
 
----
+| Profile | Shadow map / distance / taps | AO | Reflection steps | Cloud steps | Shafts |
+|---|---|---:|---:|---:|---:|
+| Recommended for HD 5500 / Performance | 1024 / 64 / 4 | 4 | 5 | 5 | 4 |
+| Balanced | 2048 / 80 / 6 | 6 | 6 | 8 | 6 |
+| Visual | 2048 / 128 / 9 | 9 | 10 | 12 | 8 |
 
-## Decision: no bloom
+All three profiles keep the effects listed above enabled. They differ in cost and strength,
+not in whether the features exist.
 
-Bloom needs a bright pass, a downsample chain and an upsample. Even the cheapest version is
-three passes.
+## Benchmark protocol still required
 
-A single-pass approximation at full resolution was considered: 13 taps at doubled offsets.
-That is 12 million texture fetches per frame to add a soft glow, which is more than the
-entire water system costs. It was rejected rather than made cheap enough to be pointless.
+A useful target-machine comparison must use the same Minecraft version, Iris and Sodium
+versions, world, camera position, render distance, resolution, weather and time of day.
+Record at least:
 
-The substitute is the tonemap. ACES rolls highlights off over about two stops instead of
-clipping them, so a bright sky and a sunlit water surface keep their shape without a glow
-layer. It is not the same effect and the README does not pretend it is.
+- average FPS and 1% low, or frame time in milliseconds;
+- resolution and render distance;
+- profile and any changed shader options;
+- GPU/CPU utilisation and temperature if available;
+- whether the scene contains water, dense foliage, shadows and visible clouds.
 
----
-
-## Decision: cloud march at eight steps
-
-Eight samples through a 74 block slab is a step every nine blocks. That sounds too coarse
-and would be, except for two things:
-
-1. The density field is low frequency by construction — one feature per ~230 blocks — so
-   eight samples across a mass is enough to resolve its shape.
-2. The lighting is analytic per sample, not integrated along a light ray. There is no
-   second march that would need more samples to converge.
-
-Cylindrical bands from a coarse march are hidden by a Bayer jitter on the ray start plus
-the smooth transmittance accumulation. Near the horizon the march steps span hundreds of
-blocks, and there the code deliberately **cross-fades to a broad low frequency field** with
-capped optical depth and a fade into the haze, rather than pretending the fixed budget can
-resolve something that far away.
-
-12 steps in the Visual preset is the most this GPU should ever see.
-
----
-
-## Decision: one 2048 shadow map, 96 blocks
-
-Shadow resolution per block is `2 * shadowDistance / shadowMapResolution`. At 96 blocks and
-2048 that is 9.4 cm per texel, which is fine with a six tap spiral. At 128 blocks and 2048
-it is 12.5 cm and still acceptable.
-
-A second cascade would nearly double the geometry submission cost of the entire pack for a
-benefit visible only beyond a hundred blocks — which is inside the fog anyway, on this
-render distance.
-
-`SHADOWS = 0` sets `shadow.enabled = false` in `shaders.properties`, which removes the
-render pass entirely rather than leaving it running unsampled. That is about a third of the
-vertex work back.
-
-The pass writes a colour target that nothing reads, because it exists for its depth. 1.2.0
-removed that write — 2048x2048 RGBA8 is 16.7 MB, and writing it once per frame at 40 fps is
-about 670 MB/s of the 25 GB/s bus — and 1.3.0 put it back. A gbuffers-style program with no
-fragment output at all is an unusual shape to ask a driver and a loader to accept, it could
-not be verified without running the game, and reliability is worth more than two percent of
-bandwidth here. The one fetch the pass does pay for is the texture sample in the fragment
-stage, which is the cutout: without it every leaf casts the shadow of a full block, so it is
-not optional.
-
----
-
-## Decision: camera-relative world space throughout
-
-All lighting, shadow transforms and fog are done in camera relative world space, converted
-once in the vertex stage. The alternative, converting per fragment, repeats the work for
-every pixel of every surface. The cost of the conversion is one matrix multiply per vertex,
-which is nothing.
-
----
-
-## Decision: sRGB conversion by polynomial in the hot path
-
-`sRGBToLinear` uses a cubic fit of the inverse sRGB transfer (`x(x(0.305x + 0.682) + 0.0125)`)
-rather than `pow`. It runs once per visible fragment in the geometry pass. At 720p the
-difference is about 2.8 million `pow()` calls per frame, and on Gen8 `pow` is a sequence of
-instructions rather than a single one.
-
-The exact piecewise curve is still used on the way out, in `final`, where it is one pixel
-per screen pixel and the accuracy matters for how the image is displayed.
-
-`pow()` also appears in the water glitter, where the exponent is a chain of multiplies
-instead, and in `exp()` for fog and absorption, which cannot be avoided and are worth it.
-
----
-
-## What is most likely to need tuning
-
-Arithmetic cannot pick a colour. When the pack is first run, these are the numbers most
-likely to be wrong and the direction to move them:
-
-| Symptom | Setting | Direction |
-|---|---|---|
-| Scene too bright or washed out | `COLOR_EXPOSURE` | down |
-| Shadows too dark, detail lost | `AMBIENT_STRENGTH` | up |
-| Shadows too flat and grey | `AMBIENT_STRENGTH` | down |
-| Sky too saturated or too pale | `ZENITH_DAY` in `lib/atmosphere.glsl` | desaturate / raise |
-| Sunset band too strong or too weak | the `0.80` in `aetherisSkyGradient` | up / down |
-| Water too dark | `WATER_EXTINCTION` in `lib/water_composite.glsl` | down |
-| Water too clear, no depth | `WATER_CLARITY` | down |
-| Reflections too strong at steep angles | the `0.02` F0 in `aetherisWaterSurface` | up |
-| Water glitter too harsh | the `5.4` multiplier in the glitter term | down |
-| Clouds too flat or too soft-edged | `CLOUD_COVERAGE` | down for more edge |
-| Too many clouds | `CLOUD_COVERAGE` | down |
-| Clouds too small and busy | `CLOUD_SCALE` | up |
-| Foliage too bright | the `0.85` on the transmission rim | down |
-| Wind too strong | the `0.055 + 0.085 * gust` in `aetherisWindOffset` | down |
-| Fog too thick | `FOG_DENSITY` | down |
-
-Frame rate first, then colour. A pack that looks right at 15 fps is not usable.
+Test the Performance profile first at 1280x720 and 6 chunks, then compare Balanced. Do not
+change several settings between measurements. The numbers in this file are algorithmic
+budgets, not benchmark results.
