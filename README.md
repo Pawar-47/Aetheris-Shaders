@@ -9,9 +9,11 @@ integrated GPU, with BSL Shaders as its artistic reference. Where BSL's look com
 particular way of handling light, atmosphere and water, this pack studies that principle
 and re-derives its own version of it at a fraction of the cost.
 
-**Status: 1.2.0. Statically validated, not yet run in a game.** See
+**Status: 1.3.0. Statically validated, not yet run in a game.** See
 [What has and has not been verified](#what-has-and-has-not-been-verified) before you
-expect anything from it.
+expect anything from it. If Iris refuses to apply the pack and shows an empty error, see
+[Troubleshooting](docs/TROUBLESHOOTING.md) — that page names the log lines that actually
+explain a failed load.
 
 ### Iris, not OptiFine
 
@@ -236,8 +238,10 @@ neither is visible from inside the shading code:
   folded out before that bound. That is what makes the corner where two blocks meet and the
   foot of a wall read as contact rather than as a flat junction. It multiplies ambient only.
 
-The pass itself is depth only: no colour output, no `DRAWBUFFERS`, so Iris allocates no
-`shadowcolour0` and nothing writes a 2048x2048 colour attachment that nothing reads.
+The pass writes a colour target it never reads, because this pass exists for its depth.
+1.2.0 removed that write to save 16.7 MB per frame and 1.3.0 put it back: a gbuffers-style
+program with no fragment output is the least ordinary thing this pack could ask a loader to
+accept, and it is not worth a few percent of bandwidth against a failure to load.
 
 ---
 

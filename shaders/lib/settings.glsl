@@ -3,15 +3,29 @@
 
 /* Aetheris Shaders - options and hardware constants.
  *
- * Everything in this file is either a compile time option that Iris exposes in
- * the shader pack settings screen, or a constant that describes the machine this
+ * Every user option in this file is a #define with its allowed values in a trailing
+ * comment, and that is not a style preference.
+ *
+ * Iris only recognises a fixed list of `const` option names: shadowMapResolution,
+ * shadowDistance, sunPathRotation, ambientOcclusionLevel, superSamplingLevel,
+ * noiseTextureResolution and a set of shadow map flags. A `const float SUN_STRENGTH`
+ * is not an option at all, whatever comment follows it, and Iris says so only in a
+ * diagnostic that never reaches the user. This file declared every slider that way.
+ *
+ * The consequence is worth writing down because it cost a release: the pack shipped
+ * with an option set containing only the #defines, while shaders.properties referred
+ * to the const names from screen.*, sliders and every profile.*. Iris builds the
+ * settings menu from those references, so choosing the pack failed while applying it
+ * and the error details had nothing in them. Anything the user can change is a #define
+ * from here on, and tools/validate.py enforces it.
+ *
+ * Everything is a compile time option, or a constant that describes the machine this
  * pack is tuned for: an Intel Core i3-5005U with Intel HD Graphics 5500.
  *
- * The HD 5500 is a 24 EU Broadwell part sharing a 25.6 GB/s memory bus with the
- * CPU. The budget decisions that follow from that are documented in
- * docs/PERFORMANCE.md: one shadow map, one geometry pass, two fullscreen passes,
- * no bloom chain, and every expensive loop bounded by a constant the user can
- * turn down.
+ * The HD 5500 is a 24 EU Broadwell part sharing a 25.6 GB/s memory bus with the CPU.
+ * The budget decisions that follow from that are documented in docs/PERFORMANCE.md:
+ * one shadow map, one geometry pass, two fullscreen passes, no bloom chain, and every
+ * expensive loop bounded by a constant the user can turn down.
  */
 
 /* --------------------------------------------------------------------------
@@ -40,9 +54,6 @@ const float shadowDistance = 96.0; // [64.0 80.0 96.0 128.0]
 // the pack and it only runs on water pixels.
 #define REFLECTION_STEPS 8 // [6 8 10]
 
-// Refraction offset strength in screen proportions.
-const float WATER_REFRACTION = 1.0; // [0.0 0.5 1.0 1.5 2.0]
-
 // Procedural clouds. 0 removes the whole cloud march.
 #define CLOUDS 1 // [0 1]
 
@@ -69,51 +80,57 @@ const float WATER_REFRACTION = 1.0; // [0.0 0.5 1.0 1.5 2.0]
  * Scene sliders
  * ----------------------------------------------------------------------- */
 
-const float SUN_STRENGTH = 2.10; // [0.25 2.1500000953674316 4.0]
+// Directional sun. The scene is built around 2.1: bright enough to keep highlights off
+// the ACES shoulder, dark enough that a lit surface is not already white.
+#define SUN_STRENGTH 2.10 // [1.00 2.10 3.00 4.00]
 
-const float AMBIENT_STRENGTH = 1.00; // [0.0 1.0 3.0]
+#define AMBIENT_STRENGTH 1.0 // [0.0 1.0 3.0]
 
-const float BLOCKLIGHT_STRENGTH = 1.00; // [0.0 1.0 3.0]
+#define BLOCKLIGHT_STRENGTH 1.0 // [0.0 1.0 3.0]
 
-const float FOG_DENSITY = 1.00; // [0.0 1.0 3.0]
+#define FOG_DENSITY 1.0 // [0.0 1.0 3.0]
 
-const float FOG_HEIGHT = 72.0; // [24.0 72.0 256.0]
+#define FOG_HEIGHT 72.0 // [24.0 72.0 256.0]
 
-const float CLOUD_COVERAGE = 0.45; // [0.0 0.45 1.0]
+#define CLOUD_COVERAGE 0.45 // [0.0 0.45 1.0]
 
-const float CLOUD_ALTITUDE = 180.0; // [120.0 180.0 320.0]
+#define CLOUD_ALTITUDE 180.0 // [120.0 180.0 320.0]
 
-const float CLOUD_SCALE = 1.00; // [0.5 1.0 2.0]
+#define CLOUD_SCALE 1.0 // [0.5 1.0 2.0]
 
-const float CLOUD_SPEED = 1.00; // [0.0 1.0 3.0]
+#define CLOUD_SPEED 1.0 // [0.0 1.0 3.0]
 
-const float WATER_WAVE_HEIGHT = 1.00; // [0.0 1.0 2.5]
+#define WATER_WAVE_HEIGHT 1.0 // [0.0 1.0 2.5]
 
-const float WATER_WAVE_SPEED = 1.00; // [0.0 1.0 2.0]
+#define WATER_WAVE_SPEED 1.0 // [0.0 1.0 2.0]
 
-const float WATER_CLARITY = 1.00; // [0.0 1.0 2.5]
+#define WATER_CLARITY 1.0 // [0.0 1.0 2.5]
+
+// Refraction offset strength in screen proportions.
+#define WATER_REFRACTION 1.0 // [0.0 0.5 1.0 1.5 2.0]
 
 // How strongly the water column colours what is seen through it, and how much of the
 // medium there is to see when the eye is inside it. 1.0 is the designed look; 0 turns
 // underwater into clear air, which is useful for finding a bug in the fog rather than
 // for playing.
-const float UNDERWATER_TINT = 1.00; // [0.0 1.0 2.0]
+#define UNDERWATER_TINT 1.0 // [0.0 1.0 2.0]
 
-const float SHADOW_SOFTNESS = 1.00; // [0.5 1.0 2.5]
+// The penumbra width. 0.8 is the Performance preset, 1.25 the Visual one.
+#define SHADOW_SOFTNESS 1.0 // [0.5 0.8 1.0 1.25 2.5]
 
 /* --------------------------------------------------------------------------
  * Colour grading
  * ----------------------------------------------------------------------- */
 
-const float COLOR_EXPOSURE = 1.00; // [0.25 1.0 2.5]
+#define COLOR_EXPOSURE 1.0 // [0.25 1.0 2.5]
 
-const float COLOR_SATURATION = 1.02; // [0.0 1.02 2.0]
+#define COLOR_SATURATION 1.02 // [0.0 1.02 2.0]
 
-const float COLOR_CONTRAST = 1.00; // [0.5 1.0 1.5]
+#define COLOR_CONTRAST 1.0 // [0.5 1.0 1.5]
 
 // Positive warms the image, negative cools it.
-const float COLOR_TEMPERATURE = 0.00; // [-1.0 0.0 1.0]
+#define COLOR_TEMPERATURE 0.0 // [-1.0 0.0 1.0]
 
-const float COLOR_VIGNETTE = 0.15; // [0.0 0.15 1.0]
+#define COLOR_VIGNETTE 0.15 // [0.0 0.15 1.0]
 
 #endif

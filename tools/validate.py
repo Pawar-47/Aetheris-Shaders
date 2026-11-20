@@ -380,17 +380,86 @@ def check_program(name, vsh_path, fsh_path):
     elif outputs > 1:
         fail("%s: %d outputs but no DRAWBUFFERS line" % (label, outputs))
 
+    if outputs < 1:
+        fail("%s: the fragment stage declares no output at all; every program Iris runs against a "
+             "colour target should write one" % label)
+
+
+# Iris only recognises a fixed set of `const` option names. Everything else has to be a
+# #define: OptionAnnotatedSource.parseConst rejects a const whose name is not in this
+# list, so such a line is silently not an option, while shaders.properties can still
+# refer to it from screen.*, sliders, #if and profile.*. That mismatch is what made 1.2.0
+# fail to apply with an empty error, and it is invisible to every other check here.
+IRIS_CONST_OPTIONS = set("""
+shadowMapResolution shadowDistance voxelDistance shadowDistanceRenderMul
+entityShadowDistanceMul shadowIntervalSize generateShadowMipmap generateShadowColorMipmap
+shadowHardwareFiltering shadowtex0Mipmap shadowtexMipmap shadowtex1Mipmap shadowtex0Nearest
+shadowtexNearest shadow0MinMagNearest shadowtex1Nearest shadow1MinMagNearest
+wetnessHalflife drynessHalflife eyeBrightnessHalflife centerDepthHalflife sunPathRotation
+ambientOcclusionLevel superSamplingLevel noiseTextureResolution
+""".split())
+
+OPTION_DEFINE_RE = re.compile(r'^#define\s+([A-Z0-9_]+)\s+(\S+)\s*//\s*\[([^\]]*)\]', re.MULTILINE)
+OPTION_CONST_RE = re.compile(r'^const\s+(?:int|float|bool)\s+(\w+)\s*=\s*([^;]+);\s*//\s*\[([^\]]*)\]',
+                             re.MULTILINE)
+
+
+def parse_options():
+    """Return {name: (default value, [allowed values])} for every option Iris accepts.
+
+    This models Iris' own parser rather than the pack's intent, which is the whole point:
+    an option Iris does not register cannot be shown, saved or applied, and a reference to
+    it from shaders.properties is a load-time failure.
+    """
+    settings = read_text(os.path.join(SHADERS, "lib", "settings.glsl"))
+    options = {}
+
+    for match in OPTION_DEFINE_RE.finditer(settings):
+        options[match.group(1)] = (match.group(2), match.group(3).split())
+
+    for match in OPTION_CONST_RE.finditer(settings):
+        name = match.group(1)
+        if name not in IRIS_CONST_OPTIONS:
+            fail("settings.glsl: '%s' is declared as a const option, but Iris only accepts a "
+                 "fixed list of const option names; declare it with #define or it is not an "
+                 "option at all" % name)
+            continue
+        options[name] = (match.group(2).strip(), match.group(3).split())
+
+    for name, (value, allowed) in sorted(options.items()):
+        if allowed and value not in allowed:
+            warn("settings.glsl: the default of %s (%s) is not one of its allowed values; Iris "
+                 "appends it, so the control shows a value that is not one of its stops"
+                 % (name, value))
+
+    return options
+
 
 def check_options():
-    settings = read_text(os.path.join(SHADERS, "lib", "settings.glsl"))
-    known = set(re.findall(r'^\s*#define\s+([A-Z0-9_]+)', settings, re.MULTILINE))
-    known.update(re.findall(r'^const\s+(?:int|float|bool)\s+(\w+)\s*=', settings, re.MULTILINE))
+    options = parse_options()
+    known = set(options)
 
     properties_text = read_text(os.path.join(SHADERS, "shaders.properties"))
     for line in properties_text.splitlines():
         stripped = strip_comments(line).strip()
-        if not stripped or stripped.startswith("#"):
+        if not stripped:
             continue
+
+        # Conditionals in shaders.properties are preprocessed against the pack's options.
+        # A name that is not an option expands to nothing and the condition is then
+        # malformed, which Iris reports only in its own log.
+        if stripped.startswith("#if"):
+            for token in re.findall(r'[A-Za-z_]\w*', stripped):
+                if token in ("if", "ifdef", "ifndef", "defined", "elif"):
+                    continue
+                if token not in known:
+                    fail("shaders.properties: '%s' names '%s' in a conditional, which is not an "
+                         "option in settings.glsl" % (stripped, token))
+            continue
+
+        if stripped.startswith("#"):
+            continue
+
         key, _, value = stripped.partition("=")
         key = key.strip()
         # screen.columns and its siblings are layout metadata, not option lists.
@@ -409,10 +478,15 @@ def check_options():
                 token = token.strip("\\")
                 if "=" not in token:
                     continue
-                option = token.split("=", 1)[0]
+                option, _, preset_value = token.partition("=")
                 if option not in known:
                     fail("shaders.properties: %s sets '%s', which is not an option in settings.glsl"
                          % (key, option))
+                    continue
+                allowed = options[option][1]
+                if allowed and preset_value not in allowed:
+                    warn("shaders.properties: %s sets %s=%s, which is not one of that option's "
+                         "allowed values" % (key, option, preset_value))
 
 
 def main():

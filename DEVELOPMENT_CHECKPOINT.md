@@ -8,11 +8,12 @@ work resumes from the exact point it stopped rather than from the beginning.
 
 ---
 
-**Current release:** 1.2.0 (`Aetheris-Shaders-1.2.0.zip`). 1.0.0 was the first release, 1.1.0
-fixed the loading failure. The 1.0.1 tree that was written between them was never committed
-and never published, so its two fixes are folded into 1.1.0 rather than pretending to be a
-release of their own. The changelog says so; an earlier version of this file claimed 1.0.1
-had been published and that was wrong.
+**Current release:** 1.3.0 (`Aetheris-Shaders-1.3.0.zip`). 1.0.0 was the first release, 1.1.0
+fixed a duplicate uniform that sent the pack back to vanilla rendering, 1.2.0 completed the
+shadow pipeline, and 1.3.0 fixes the apply failure described below. The 1.0.1 tree that was
+written between 1.0.0 and 1.1.0 was never committed and never published, so its two fixes are
+folded into 1.1.0 rather than pretending to be a release of their own; an earlier version of
+this file claimed 1.0.1 had been published and that was wrong.
 
 ---
 
@@ -35,7 +36,14 @@ detection path that depended entirely on one file being parsed as expected.
 
 ## Current stage
 
-**1.2.0 implemented, statically validated, still awaiting its first run in Minecraft.**
+**1.3.0 implemented, statically validated, still awaiting its first run in Minecraft.**
+
+The pack has now failed for two different reasons and both were found by reading Iris' own
+source rather than by reasoning about the pack. 1.1.0 was a duplicate uniform, which made Iris
+render vanilla. 1.3.0 is the apply failure: Iris registers a `const` option only when its name
+is in its own whitelist, so twenty of this pack's sliders did not exist as options while
+`shaders.properties` referred to every one of them, and the menu Iris builds at apply time is
+where that threw. No amount of GLSL reading would have shown either one.
 
 Every pass is written and wired up. There is no placeholder, no stubbed function and no
 `TODO` in the shader source. The pack packages into a correctly rooted zip.
@@ -175,15 +183,37 @@ error. That is not the same as knowing the pack works.
       `gl_ModelViewProjectionMatrix` are all replaced on the compatibility path, so the
       fullscreen quad is correct as written.
 
+### 1.3.0 — the apply failure
+
+- [x] **Root cause: every slider was a `const` option, which Iris does not accept.**
+      `OptionAnnotatedSource.parseConst` registers a const option only if its name is in
+      `VALID_CONST_OPTION_NAMES`; anything else gets a diagnostic that never reaches the
+      user. Twenty options here were `const float`, so Iris had a menu referencing twenty
+      options it had never registered, and building that menu is what threw while applying.
+- [x] Every user option is a `#define` with its allowed values in a trailing comment.
+- [x] `SUN_STRENGTH`'s default was not one of its own allowed values; the `0.8` and `1.25`
+      softness values the presets set were missing from `SHADOW_SOFTNESS`'s list.
+- [x] The shadow pass declares a colour output again; the 16.7 MB per frame it saves is not
+      worth the load risk.
+- [x] `docs/TROUBLESHOOTING.md`, including the parsing rules that are invisible in the GLSL.
+- [x] Four more validator rules: const option names must be whitelisted, every fragment stage
+      must declare an output, `#if` in shaders.properties must name a real option, and a
+      preset value must be one of that option's allowed values.
+
 ---
 
 ## Latest successful validation
 
-**CI green on `main` for 1.1.0.** The `Validate` workflow runs the static validation, the
+**CI green on `main` for 1.2.0.** The `Validate` workflow runs the static validation, the
 block ID agreement check, the option label check, packaging and artifact upload, and the
-`Release` workflow published `Aetheris-Shaders-1.1.0.zip` from the same commit. The 1.2.0
-tree had not been through it at the time this was written: the push that carries this file
-is what runs it.
+`Release` workflow published `Aetheris-Shaders-1.2.0.zip` from the same commit. The 1.3.0 tree
+had not been through it at the time this was written: the push that carries this file is what
+runs it.
+
+Worth stating plainly: two green CI runs shipped two packs that could not run. Every check in
+`tools/validate.py` modelled *this pack's intent*, not Iris' parser. The four rules added in
+1.3.0 are the first that model Iris' behaviour instead, which is why the const-option
+whitelist is now enforced rather than assumed.
 
 The validator earned its place during 1.0.0. It found:
 
@@ -257,8 +287,8 @@ In the order they should be done.
 
 1. **Load the pack in Minecraft 1.21.5 with Iris 1.8.x.** Press Ctrl+D on the shader
    selection screen first: that writes the patched source to `patched_shaders/`, which is
-   the only readable record of what Iris actually compiled. Then read `latest.log` for
-   compile errors before worrying about anything else.
+   the only readable record of what Iris actually compiled. If it fails, follow
+   `docs/TROUBLESHOOTING.md` and send the log lines rather than the on-screen message.
 2. **Read the failure mode, not just the failure.** If the game looks exactly vanilla, the
    pack did not load: look for a compile error. If the screen is black or white, the pack
    loaded and a buffer link is wrong — `DRAWBUFFERS:1` on `composite.fsh`, and `final.fsh`

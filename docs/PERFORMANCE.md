@@ -160,12 +160,14 @@ render distance.
 render pass entirely rather than leaving it running unsampled. That is about a third of the
 vertex work back.
 
-The pass is depth only: no colour output and no `DRAWBUFFERS`, so Iris allocates no
-`shadowcolour0` buffer and the pass does not write a 2048x2048 RGBA8 attachment every
-frame. That attachment is 16.7 MB, and writing it once per frame at 40 fps is about
-670 MB/s of the 25 GB/s bus for data nothing reads. The one fetch the pass does pay for is
-the texture sample in the fragment stage, which is the cutout — without it every leaf casts
-the shadow of a full block, so it is not optional.
+The pass writes a colour target that nothing reads, because it exists for its depth. 1.2.0
+removed that write — 2048x2048 RGBA8 is 16.7 MB, and writing it once per frame at 40 fps is
+about 670 MB/s of the 25 GB/s bus — and 1.3.0 put it back. A gbuffers-style program with no
+fragment output at all is an unusual shape to ask a driver and a loader to accept, it could
+not be verified without running the game, and reliability is worth more than two percent of
+bandwidth here. The one fetch the pass does pay for is the texture sample in the fragment
+stage, which is the cutout: without it every leaf casts the shadow of a full block, so it is
+not optional.
 
 ---
 

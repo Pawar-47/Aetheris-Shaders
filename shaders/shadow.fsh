@@ -1,6 +1,9 @@
 #version 330 compatibility
 
-/* No DRAWBUFFERS line on purpose: the shadow pass is depth only and declares no colour
- * output, so Iris allocates no shadowcolour buffer for it. See lib/body/shadow.fsh. */
+/* DRAWBUFFERS:0 */
+
+/* The colour target is written but never read: this pass exists for its depth. It is
+ * declared anyway, because a gbuffers-style program with no fragment output is an
+ * unusual shape to ask a loader to accept and this pack has to load. */
 
 #include "/lib/body/shadow.fsh"

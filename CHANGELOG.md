@@ -6,6 +6,45 @@ All notable changes to Aetheris Shaders are recorded here. The format follows
 
 A release is made when there is something worth installing, not when a number changes.
 
+## [1.3.0] - 2026-11-27
+
+This release is about one thing. Selecting the pack made Iris report that it had encountered
+a problem while applying, the details pane showed nothing usable, and the cause turned out to
+be this pack's own option declarations.
+
+### Fixed
+
+- **Every slider was declared as a `const`, and Iris does not accept that.** Iris' option
+  parser registers a const option only when its name is in a fixed list
+  (`OptionAnnotatedSource.VALID_CONST_OPTION_NAMES`: `shadowMapResolution`, `shadowDistance`,
+  `voxelDistance`, `sunPathRotation`, `ambientOcclusionLevel`, `superSamplingLevel`,
+  `noiseTextureResolution` and the shadow map flags). A
+  `const float SUN_STRENGTH = 2.10; // [...]` is rejected with a diagnostic that only ever
+  reaches the log, so twenty of the pack's options did not exist. `shaders.properties` then
+  referred to all twenty from `screen.SCENE`, `screen.WATER`, `screen.COLOUR`, `sliders` and
+  every `profile.*` line, and Iris builds the shader pack menu out of exactly those
+  references — that is the step that failed while applying. Every user option is a `#define`
+  now, which is what Iris expects and what the rest of the ecosystem ships.
+- `SUN_STRENGTH`'s default was not one of its own allowed values, and the `0.8` and `1.25`
+  softness values that two presets set were missing from `SHADOW_SOFTNESS`'s list.
+- **The shadow pass declares a colour output again.** 1.2.0 removed it to save a 2048x2048
+  RGBA8 write, 16.7 MB per frame that nothing reads. The saving is real, but a gbuffers-style
+  program with no fragment output at all is the least ordinary construct in this pack, it
+  cannot be verified without running the game, and it is not worth a few percent of bandwidth
+  against the whole pack failing to load.
+
+### Added
+
+- `docs/TROUBLESHOOTING.md`. Iris' details pane is not ours to fix, so the page says how to
+  get a real error out of the log instead: debug mode, `patched_shaders/`, and the exact
+  strings to search for, with a table of what each one means. It also lists the pack parsing
+  rules that are invisible from inside the GLSL — the const-option whitelist, the
+  leading-comment rule on valued `#define`s, the allowed-values lists.
+- Four more validator rules, each one a rule Iris actually enforces: a const option must use
+  a whitelisted name, every fragment stage must declare an output, a conditional in
+  `shaders.properties` must name a real option, and a value set by a preset must be one of
+  that option's allowed values.
+
 ## [1.2.0] - 2026-11-26
 
 Completes the pack against the brief and against Iris' documented behaviour. Two of the
