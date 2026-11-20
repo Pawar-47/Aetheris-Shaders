@@ -6,6 +6,26 @@ All notable changes to Aetheris Shaders are recorded here. The format follows
 
 A release is made when there is something worth installing, not when a number changes.
 
+## [1.5.3] - 2026-12-01
+
+Iris reported `'RGBA16F' undeclared` in composite, and it was right: the buffer format
+directives were in the wrong place and in the wrong form.
+
+### Fixed
+
+- **`const int colortex0Format = RGBA16F;` moved into a comment block in `composite.fsh`.**
+  Iris consumes that directive only when it finds it in the program file; one inside an
+  include is not consumed, so it goes to the driver, where `RGBA16F` is not an identifier and
+  the program fails to compile. It is now in the documented form — a commented block at the
+  top of `shaders/composite.fsh` — which the loader still reads and the compiler ignores.
+
+### Fixed in the check, not the pack
+
+- `tools/glsl_check.py` no longer strips those directives before compiling. It was stripping
+  them to keep glslang quiet, which made the check *more lenient than Iris* and is exactly
+  why it passed a pack that Iris rejects. A code-form directive now fails CI instead of
+  being papered over.
+
 ## [1.5.2] - 2026-12-01
 
 The parse error from the log, and the reason it took six releases to find it.
