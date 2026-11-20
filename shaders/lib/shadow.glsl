@@ -5,15 +5,13 @@
 
 /* Shadow mapping.
  *
- * One depth map, one golden angle spiral, no cascades. The HD 5500 renders the
- * shadow pass at the cost of a second full geometry submission, so a second
- * cascade would nearly double the vertex load of the whole pack for a benefit only
- * visible past a hundred blocks, which is inside the fog anyway.
+ * One depth map, no cascades. Performance uses a fixed symmetric four-tap kernel
+ * and Iris culls geometry outside the useful shadow frustum/radius. Balanced and
+ * Visual use the six- and nine-tap rotated spiral kernels.
  *
- * The spiral is jittered per pixel with the Bayer pattern: a fixed eight tap
- * spiral leaves a recognisable, static stipple on every soft edge, while rotating
- * it per pixel turns the same eight taps into coherent dither that reads as a
- * smooth penumbra.
+ * The low-cost kernel avoids per-pixel hash and trigonometric work. The same depth
+ * reads also supply near-field contact darkening, so contact shadows do not launch
+ * a second sampling loop.
  *
  * shadowtex0 carries the alpha tested foliage as well as solid geometry, so tree
  * shadows have the shape of the leaves. shadowtex1 is opaque only and is not used:

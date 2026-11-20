@@ -3,12 +3,12 @@
 
 /* Aetheris Shaders - options and hardware constants.
  *
- * Every user option in this file is a #define with its allowed values in a trailing
- * comment, and that is not a style preference.
+ * Pack-defined toggles and sliders are #defines with allowed values in trailing
+ * comments. Iris-native constant options are the explicit exception.
  *
  * Iris only recognises a fixed list of `const` option names: shadowMapResolution,
- * shadowDistance, sunPathRotation, ambientOcclusionLevel, superSamplingLevel,
- * noiseTextureResolution and a set of shadow map flags. A `const float SUN_STRENGTH`
+ * shadowDistance, shadowDistanceRenderMul, sunPathRotation, ambientOcclusionLevel,
+ * superSamplingLevel, noiseTextureResolution and a set of shadow map flags. A `const float SUN_STRENGTH`
  * is not an option at all, whatever comment follows it, and Iris says so only in a
  * diagnostic that never reaches the user. This file declared every slider that way.
  *
@@ -17,7 +17,8 @@
  * to the const names from screen.*, sliders and every profile.*. Iris builds the
  * settings menu from those references, so choosing the pack failed while applying it
  * and the error details had nothing in them. Anything the user can change is a #define
- * from here on, and tools/validate.py enforces it.
+ * from here on, apart from those explicitly recognised Iris constants, and
+ * tools/validate.py enforces the distinction.
  *
  * Everything is a compile time option, or a constant that describes the machine this
  * pack is tuned for: an Intel Core i3-5005U with Intel HD Graphics 5500.

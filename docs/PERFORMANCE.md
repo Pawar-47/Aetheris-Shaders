@@ -6,10 +6,12 @@ The target is one laptop: Intel Core i3-5005U (2 cores / 4 threads, 2.00 GHz), I
 Graphics 5500 (Broadwell Gen8), 8 GB RAM, Linux Mint, Minecraft Java 1.21.5, Iris 1.8.x
 and Sodium.
 
-The HD 5500 shares system memory with the CPU. The often-quoted 25.6 GB/s is a theoretical
-dual-channel peak, not a measured bandwidth figure for this laptop. The GPU is an older
-integrated part, so both memory traffic and texture sampling matter. The CPU also has only
-two physical cores; chunk building and draw submission compete with the game and driver.
+Intel's 5th-generation graphics developer guide lists three texture samplers and a
+24-EU HD 5500 design (23 active EUs on some Core i3 SKUs). The GPU shares system memory
+with the CPU. The often-quoted 25.6 GB/s is a theoretical dual-channel peak, not a measured
+bandwidth figure for this laptop; the actual 8 GB channel configuration is not yet known.
+Both memory traffic and texture sampling matter. The CPU has only two physical cores, so
+chunk building and draw submission compete with the game and driver.
 
 This document describes the algorithms and configured budgets. It does **not** claim a
 measured frame rate or a guaranteed millisecond budget. No benchmark from the target laptop
@@ -80,9 +82,11 @@ frame-time feedback controller. Choose a profile or adjust its exposed values ma
 ### Shadows
 
 A single map avoids the geometry submission cost of cascades. The Performance profile uses
-a 1024 map and 64-block distance with four taps. The four low-cost taps use a symmetric
-2x2 kernel; higher profiles use more samples and per-pixel rotation. The same depth reads
-also estimate the near-field contact term, avoiding a second four-tap loop.
+a 1024 map and 64-block distance with four taps. Iris' `shadow.culling=true` and
+`shadowDistanceRenderMul=1.0` make the configured radius participate in actual shadow-pass
+geometry culling, rather than only shrinking the projection matrix. The four low-cost taps
+use a symmetric 2x2 kernel; higher profiles use more samples and per-pixel rotation. The
+same depth reads also estimate the near-field contact term, avoiding a second four-tap loop.
 
 This is still a real shadow pass. It is not replaced with fake vertex shading or disabled
 to obtain the Performance preset.

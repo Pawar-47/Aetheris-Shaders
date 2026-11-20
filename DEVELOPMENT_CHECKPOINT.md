@@ -11,6 +11,27 @@
 - The published v1.6.1 tag points to e2f7bb73c7848576895ae8041e8237e31970f1f3 on main. It predates this branch's feature-preserving pipeline.
 - No new release has been published from this branch.
 
+## Protected reference inputs
+
+- The user-supplied `Shader.zip` was inspected read-only. SHA-256:
+  `f49d9a9245bcdee742bba97c7d5001a3b4fcf43d501d672e3645b57637b9db4a`.
+  The archive is not modified, committed or bundled into the shader release.
+- The archive identifies MakeUp Ultra Fast v9.6. Its ZIP has no license file; the upstream
+  [MakeUpUltraFast repository](https://github.com/javiergcim/MakeUpUltraFast) currently
+  carries LGPL-3.0. No MakeUp source files are copied into Aetheris. Only high-level
+  techniques are used as references, including bounded screen-space reflections, depth-
+  gated light shafts, reduced sample budgets and low-resolution bloom. Any future source
+  port requires a separate licence review and notices.
+- The public
+  [minecraft-shader-template](https://github.com/ascpixi/minecraft-shader-template) was
+  consulted read-only at master commit
+  `ab2b99c9e1715cb951936157fe3c2ef94890233b`. No files were changed there and no source
+  files were copied into Aetheris. Its root had no LICENSE file at the inspected revision,
+  so it remains a documentation/layout reference only.
+- Only `Pawar-47/Aetheris-Shaders:perf/full-feature-performance` is modified. The Aetheris
+  `main` branch, published v1.6.1 tag, uploaded ZIP and upstream template repository remain
+  untouched.
+
 ## Completed in this continuation
 
 - Aligned README presets and verification claims with the feature-preserving pipeline.

@@ -4,8 +4,9 @@ A Minecraft Java shader pack for Iris, written from scratch for one specific mac
 an Intel Core i3-5005U with Intel HD Graphics 5500 and 8 GB of RAM on Linux Mint.
 
 Aetheris is not a BSL fork, a BSL derivative, or a reskin of one. It is an independent
-implementation, structured and tuned around the limits of a 24 execution unit Broadwell
-integrated GPU, with BSL Shaders as its artistic reference. Where BSL's look comes from a
+implementation, structured and tuned around the limits of the Broadwell HD 5500 integrated
+GPU. Intel's Gen5 guide lists three texture samplers and notes 23 active EUs on some Core i3
+SKUs. BSL Shaders are its artistic reference. Where BSL's look comes from a
 particular way of handling light, atmosphere and water, this pack studies that principle
 and re-derives its own version of it at a fraction of the cost.
 
@@ -30,16 +31,17 @@ shader template layout: `RENDERTARGETS` instead of the OptiFine-era `DRAWBUFFERS
 | Component | Specification |
 |---|---|
 | CPU | Intel Core i3-5005U, 2.00 GHz, 2 cores / 4 threads |
-| GPU | Intel HD Graphics 5500 (Broadwell GT2, 24 EU, 0.30-0.90 GHz, shared memory) |
-| RAM | 8 GB |
+| GPU | Intel HD Graphics 5500 (Broadwell Gen8, 300-850 MHz, shared memory; 24-EU design, 23 active EUs on some Core i3 SKUs) |
+| RAM | 8 GB shared by CPU and integrated GPU |
 | OS | Linux Mint |
 | Minecraft | Java Edition 1.21.5, SK Launcher |
 | Shader loader | Iris 1.8.x |
 | Optimisation | Sodium |
 
-This is a single-machine project. It is not trying to be all things on all GPUs. The
-defaults in `shaders/lib/settings.glsl` are the settings this hardware was designed
-against, not a compromise between a laptop and a desktop.
+Intel's 25.6 GB/s memory figure is a dual-channel theoretical maximum, not a measured
+bandwidth for this laptop. Its actual 8 GB channel configuration still needs checking.
+This is a single-machine project: the defaults in `shaders/lib/settings.glsl` are tuned
+for this hardware, not averaged across desktop and laptop GPUs.
 
 ---
 
@@ -63,7 +65,9 @@ selection screen, then inspect `logs/latest.log` and the generated `patched_shad
 files. The on-screen details pane can be empty even when the log contains the real cause.
 
 No resource pack is required and none is provided. Every effect in this pack is
-achieved in shader code over vanilla assets.
+achieved in shader code over vanilla assets. The uploaded reference ZIP and the public
+shader template are treated as read-only inputs; see
+[Reference-source provenance](docs/REFERENCE-PROVENANCE.md).
 
 ### Suggested companion settings
 
@@ -222,10 +226,10 @@ and wind stops.
 
 ### Lighting
 
-Forward lighting, in the geometry pass, where the albedo already is. On a 25 GB/s shared
-memory bus that avoids an albedo and normal buffer write and read every frame at full
-resolution, and avoids a second round of shadow lookups for the same fragment. Overdraw is
-the cost, and on Minecraft terrain it is small.
+Forward lighting runs in the geometry pass, where the albedo already is. This avoids
+writing and rereading full-resolution albedo and normal G-buffers on the HD 5500's shared
+memory. The platform's 25.6 GB/s figure is a dual-channel maximum, not an assumed bandwidth
+for this laptop. Overdraw is the cost, and on Minecraft terrain it is small.
 
 Wrapped diffuse so a block's terminator is not a hard painted line. Hemisphere ambient
 that gives every shape a top-lit gradient. Block light only partly occluded by vertex AO,
@@ -303,7 +307,7 @@ fixed resolution and render distance before changing the defaults.
 ```
 shaders/
   shaders.properties     options, presets, blend states, what to suppress
-  block.properties       block ID map for vegetation, water and emissive blocks
+  block.properties       block ID map for vegetation, water, emissive and gloss materials
   lang/en_us.lang        option labels
   <program>.vsh/.fsh     thin wrappers, one pair per Iris program
   lib/                   the actual implementation

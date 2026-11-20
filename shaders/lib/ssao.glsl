@@ -27,8 +27,8 @@
 
 const float SSAO_RADIUS = 0.62;
 
-/* Six points on a spiral, rotated per pixel by the Bayer pattern so the fixed
- * pattern does not show as banding in a smooth crease. */
+/* The first four samples are a fixed symmetric pattern in Performance. Six- and
+ * nine-sample presets rotate the larger spiral per pixel to hide structured banding. */
 const vec2 SSAO_TAPS[9] = vec2[9](
     vec2(-0.7071, -0.7071), vec2(0.7071, -0.7071),
     vec2(-0.7071, 0.7071), vec2(0.7071, 0.7071),
