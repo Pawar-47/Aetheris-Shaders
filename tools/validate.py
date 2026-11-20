@@ -590,6 +590,15 @@ def check_performance_profile():
         if not os.path.isfile(path) or directive not in read_text(path):
             fail("shaders/%s must write %s" % (filename, directive))
 
+    expected_formats = {
+        "composite1.fsh": "const int colortex3Format = R11F_G11F_B10F;",
+        "composite2.fsh": "const int colortex4Format = R11F_G11F_B10F;",
+    }
+    for filename, declaration in expected_formats.items():
+        path = os.path.join(SHADERS, filename)
+        if not os.path.isfile(path) or declaration not in read_text(path):
+            fail("shaders/%s must use the compact positive-HDR effect-buffer format" % filename)
+
     final_body = read_text(os.path.join(SHADERS, "lib", "body", "final.fsh"))
     if "uniform sampler2D colortex4;" not in final_body or "texture(colortex4" not in final_body:
         fail("lib/body/final.fsh must sample the combined low-resolution effects buffer")

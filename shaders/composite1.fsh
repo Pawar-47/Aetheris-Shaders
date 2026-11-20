@@ -2,7 +2,7 @@
 
 /* RENDERTARGETS: 3 */
 /*
-const int colortex3Format = RGBA16F;
+const int colortex3Format = R11F_G11F_B10F;
 */
 
 #include "/lib/body/composite1.fsh"

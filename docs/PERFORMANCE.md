@@ -7,8 +7,8 @@ Graphics 5500 (Broadwell Gen8), 8 GB RAM, Linux Mint, Minecraft Java 1.21.5, Iri
 and Sodium.
 
 Intel's 5th-generation graphics developer guide lists three texture samplers and a
-24-EU HD 5500 design (23 active EUs on some Core i3 SKUs). The GPU shares system memory
-with the CPU. The often-quoted 25.6 GB/s is a theoretical dual-channel peak, not a measured
+24-EU HD 5500 design; low-end Core i3 ULT SKUs expose 23 active EUs, including the
+i3-5005U. The GPU shares system memory with the CPU. The often-quoted 25.6 GB/s is a theoretical dual-channel peak, not a measured
 bandwidth figure for this laptop; the actual 8 GB channel configuration is not yet known.
 Both memory traffic and texture sampling matter. The CPU has only two physical cores, so
 chunk building and draw submission compete with the game and driver.
@@ -118,6 +118,11 @@ into crawling dots. The loop is statically bounded; no unbounded while loop is u
 Both effects share two buffers configured to 0.25 x 0.25 of the display dimensions. At
 1280x720, each is 320x180 pixels, not 1280x720. Bloom extracts values above a configurable
 brightness threshold and the second pass softens them with five texture taps.
+
+Both quarter-resolution buffers use `R11F_G11F_B10F` (32-bit packed HDR) rather than
+`RGBA16F` (64-bit). Their values are non-negative RGB effect energy with no alpha
+requirement, so this halves intermediate-buffer storage and read/write traffic. Iris
+supports this format from 1.8 onward, which is within the target loader baseline.
 
 The light-shaft effect projects the sun into screen space and takes four samples along the
 ray from each low-resolution output pixel. Samples contribute only when the depth buffer

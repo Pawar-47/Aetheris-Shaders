@@ -32,6 +32,10 @@
   `main` branch, published v1.6.1 tag, uploaded ZIP and upstream template repository remain
   untouched.
 
+- [x] The two low-resolution effect buffers use `R11F_G11F_B10F` (32-bit packed HDR)
+  instead of `RGBA16F`: bloom/light-shaft energy is non-negative RGB and does not need alpha,
+  halving intermediate-buffer storage and read/write traffic. CI guards these declarations.
+
 ## Completed in this continuation
 
 - Aligned README presets and verification claims with the feature-preserving pipeline.

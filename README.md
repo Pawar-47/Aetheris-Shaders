@@ -5,8 +5,8 @@ an Intel Core i3-5005U with Intel HD Graphics 5500 and 8 GB of RAM on Linux Mint
 
 Aetheris is not a BSL fork, a BSL derivative, or a reskin of one. It is an independent
 implementation, structured and tuned around the limits of the Broadwell HD 5500 integrated
-GPU. Intel's Gen5 guide lists three texture samplers and notes 23 active EUs on some Core i3
-SKUs. BSL Shaders are its artistic reference. Where BSL's look comes from a
+GPU. Intel's Gen5 guide lists three texture samplers and 23 EUs for some Core i3 SKUs; the
+i3-5005U's ULT configuration exposes 23 active EUs. BSL Shaders are its artistic reference. Where BSL's look comes from a
 particular way of handling light, atmosphere and water, this pack studies that principle
 and re-derives its own version of it at a fraction of the cost.
 
@@ -31,7 +31,7 @@ shader template layout: `RENDERTARGETS` instead of the OptiFine-era `DRAWBUFFERS
 | Component | Specification |
 |---|---|
 | CPU | Intel Core i3-5005U, 2.00 GHz, 2 cores / 4 threads |
-| GPU | Intel HD Graphics 5500 (Broadwell Gen8, 300-850 MHz, shared memory; 24-EU design, 23 active EUs on some Core i3 SKUs) |
+| GPU | Intel HD Graphics 5500 (Broadwell Gen8, 300-850 MHz; 23 active EUs on the i3-5005U, three texture samplers) |
 | RAM | 8 GB shared by CPU and integrated GPU |
 | OS | Linux Mint |
 | Minecraft | Java Edition 1.21.5, SK Launcher |
@@ -262,9 +262,15 @@ Bloom is extracted from the lit scene into a low-resolution buffer and softened 
 five-tap blur. Light shafts are a bounded screen-space radial sample from the projected sun,
 accumulated only where the depth buffer says the sample is sky. They are a **volumetric-style
 screen-space approximation**, not a full 3D participating-media simulation. Both effects
-share the same low-resolution pipeline. Material gloss is a simple Blinn-Phong highlight
-for a curated set of metallic/polished block IDs; it is not PBR and requires no companion
-resource pack.
+share the same low-resolution pipeline.
+
+The two quarter-resolution effect buffers use `R11F_G11F_B10F` (32 bits per pixel) instead
+of `RGBA16F` (64 bits per pixel). They carry only non-negative RGB effect energy and do not
+need alpha, so the smaller packed-HDR format halves intermediate-buffer storage and
+read/write traffic. The full-resolution scene buffer retains its existing precision.
+
+Material gloss is a simple Blinn-Phong highlight for a curated set of metallic/polished
+block IDs; it is not PBR and requires no companion resource pack.
 
 ---
 
