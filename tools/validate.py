@@ -375,17 +375,19 @@ def check_program(name, vsh_path, fsh_path):
     outputs = len(LAYOUT_OUT_RE.findall(stripped_fsh))
     match = RENDERTARGETS_RE.search(read_text(fsh_path))
     if match:
-        raw = match.group(1)
+        # \s* in the pattern swallows the space before */, so the captured text has to be
+        # trimmed before it is tested for spaces *between* the entries.
+        raw = match.group(1).strip()
         if "," in raw:
             if re.search(r'\s', raw):
-                fail("%s: the render target list is %r and contains whitespace; Iris parses "
+                fail("%s: the render target list is '%s' and contains whitespace; Iris parses "
                      "each entry with Integer.parseInt, so '0, 2' throws NumberFormatException "
                      "for input string 2 and the pack will not load. Write it as 0,2"
-                     % (label, raw.strip()))
-            targets = len([t for t in raw.split(",") if t.strip()])
+                     % (label, raw))
+            targets = len([t for t in raw.split(",") if t])
         else:
             # Legacy DRAWBUFFERS packs the indices together: "02" is two targets.
-            targets = len(raw.strip())
+            targets = len(raw)
         if targets != outputs:
             fail("%s: the render target list names %d target(s) but the fragment stage "
                  "declares %d output(s)" % (label, targets, outputs))
