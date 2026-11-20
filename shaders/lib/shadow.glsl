@@ -141,15 +141,18 @@ float sampleShadowContact(vec3 playerPos, vec3 normal, float NdotL) {
     float receiverDepth = ndc.z * 0.5 + 0.5;
     float texel = 2.2 / float(shadowMapResolution);
 
-    float near = 0.0;
+    // Deliberately not called "near": near and far are Iris uniforms in this pack's
+    // translation units, and a local shadowing one of them is legal but is exactly the
+    // kind of thing a driver is entitled to be unhelpful about.
+    float contact = 0.0;
     for (int i = 0; i < 4; i++) {
         float storedDepth = texture(shadowtex0, uv + SHADOW_TAPS[i] * texel).r;
-        near += step(storedDepth, receiverDepth + 0.0045);
+        contact += step(storedDepth, receiverDepth + 0.0045);
     }
-    near *= 0.25;
+    contact *= 0.25;
 
     float distance01 = saturate(length(playerPos) / shadowDistance);
-    return mix(1.0, 1.0 - 0.45 * near, (1.0 - distance01) * 0.85);
+    return mix(1.0, 1.0 - 0.45 * contact, (1.0 - distance01) * 0.85);
 #endif
 }
 

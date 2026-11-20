@@ -5,7 +5,7 @@
 /*
 const int colortex0Format = RGBA16F;
 const int colortex1Format = RGBA16F;
-const int colortex2Format = RGBA8;
+const int colortex2Format = RGBA16F;
 */
 
 /* Reads colortex0 and colortex2 and writes colortex1. It never reads and writes the

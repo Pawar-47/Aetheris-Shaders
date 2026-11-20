@@ -51,7 +51,9 @@ vec4 aetherisCheapCloudSample(vec3 dir, AetherisSky sky) {
     vec2 p = (cameraPosition.xz + dir.xz * planeDistance) * (CLOUD_FIELD_SCALE * CLOUD_SCALE) + wind;
 
     float mass = valueNoise(vec2(p.x + p.y * 0.22, p.y * 0.82 - p.x * 0.15));
-    float threshold = mix(0.80, 0.52, saturate(CLOUD_COVERAGE));
+    // Matched to the cumulus deck's own coverage mapping in clouds.glsl, so a
+    // reflection does not show a denser deck than the sky above it.
+    float threshold = mix(0.70, 0.42, saturate(CLOUD_COVERAGE));
     float density = saturate((mass - threshold) * 2.6);
     if (density <= 0.01) return vec4(0.0);
 

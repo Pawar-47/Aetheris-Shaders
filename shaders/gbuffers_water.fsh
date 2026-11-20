@@ -3,7 +3,7 @@
 /* DRAWBUFFERS:02 */
 
 /*
-const int colortex2Format = RGBA8;
+const int colortex2Format = RGBA16F;
 */
 
 /* Two targets. Output 0 goes to colortex0 for everything translucent that is not

@@ -26,15 +26,21 @@ in vec3 playerPosition;
 in vec3 playerNormal;
 in vec4 tint;
 in float blockId;
+in float renderType;
 
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outData;
 
 void main() {
-    vec4 albedo = texture(gtexture, texcoord) * tint;
+    // The texture's alpha and the vertex colour's alpha are kept apart on purpose.
+    // With separateAo on, the vertex alpha carries vanilla's ambient occlusion and
+    // must not decide how opaque a pane of stained glass is; the texture alpha is the
+    // blend factor. With separateAo off the vertex alpha is 1.0 and the two agree.
+    vec4 texel = texture(gtexture, texcoord);
+    vec4 albedo = texel * tint;
     if (albedo.a < 0.02) discard;
 
-    if (aetherisIsId(blockId, AETHERIS_ID_WATER)) {
+    if (aetherisIsWater(blockId, renderType, lightmapCoord.y)) {
         float viewDistance = length(playerPosition);
         vec3 normal = aetherisWaterNormal(playerPosition + cameraPosition,
                                           normalize(playerNormal), viewDistance);
@@ -52,7 +58,7 @@ void main() {
                                     playerPosition, lightmapCoord, 1.0,
                                     AETHERIS_MAT_DEFAULT, sky);
 
-    outColor = vec4(aetherisApplyFog(lit, playerPosition, sky), albedo.a);
+    outColor = vec4(aetherisApplyFog(lit, playerPosition, sky), texel.a);
 
     // Alpha zero leaves colortex2 exactly as it was, under the blend function.
     outData = vec4(0.0, 0.0, 0.0, 0.0);

@@ -21,7 +21,12 @@
  * That last line is the whole performance story of the pack at a glance.
  */
 
-uniform sampler2D colortex0;
+/* colortex0 is declared by lib/water_composite.glsl, which is included above and reads
+ * it for the refraction sample and the reflection march. It must not be declared
+ * again here: two declarations of the same uniform in one translation unit are a
+ * redefinition, and Mesa rejects the program outright for it. One rejected program is
+ * enough for Iris to drop the whole pack and fall back to vanilla rendering, which is
+ * a silent, total failure of everything the pack does. */
 uniform sampler2D colortex2;
 
 in vec2 texcoord;

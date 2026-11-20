@@ -28,6 +28,30 @@ bool aetherisIsId(float id, float wanted) {
     return abs(id - wanted) < 0.5;
 }
 
+/* True when a fragment is a water surface.
+ *
+ * Three signals, most specific first, because the whole water pipeline hangs on this
+ * one test. Get it wrong and water falls through to the plain translucent path: flat,
+ * barely tinted, and indistinguishable from vanilla.
+ *
+ *   1. The ID from shaders/block.properties.
+ *   2. Iris' legacy numbering, used when block.properties is absent or unreadable:
+ *      water is 8 (flowing) and 9 (still) in the pre-1.13 block IDs.
+ *   3. A fluid that is not lighting itself. Iris documents mc_Entity.y as 1.0 for
+ *      fluids and -1.0 otherwise, and lava is the only other fluid that reaches this
+ *      pass. Lava always reports block light at its own surface, which is what keeps
+ *      it out of the water branch when the ID map has failed and both read -1.
+ *
+ * The third signal is the reason this is a function rather than an equality test in
+ * gbuffers_water: it is the difference between "water works" and "water works only if
+ * Iris parsed one particular file the way it was expected to".
+ */
+bool aetherisIsWater(float id, float renderType, float blockLight) {
+    if (aetherisIsId(id, AETHERIS_ID_WATER)) return true;
+    if (aetherisIsId(id, 8.0) || aetherisIsId(id, 9.0)) return true;
+    return renderType > 0.5 && id < -0.5 && blockLight < 0.5;
+}
+
 /* How much this vertex is allowed to move.
  *
  * Leaves are a full cube, so they all move together and a constant weight is right.

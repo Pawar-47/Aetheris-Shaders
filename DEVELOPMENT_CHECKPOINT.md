@@ -4,20 +4,46 @@ Aetheris Shaders. This file is the first thing to read when picking the project 
 It records where things stand, what is proven, what is not, and what comes next, so that
 work resumes from the exact point it stopped rather than from the beginning.
 
-**Last updated:** at the 1.0.0 release commit.
+**Last updated:** at the 1.1.0 release commit.
 
 ---
 
+**Current release:** 1.1.0 (`Aetheris-Shaders-1.1.0.zip`). 1.0.0 was the first release. The
+1.0.1 tree that was written next was never committed and never published, so its two fixes
+are folded into 1.1.0 rather than pretending to be a release of their own. The changelog
+says so; an earlier version of this file claimed 1.0.1 had been published and that was
+wrong.
+
+---
+
+## Why 1.1.0 exists
+
+The reported symptom was that the pack looked identical to vanilla. That is what Iris does
+when a program fails to build: it drops the pack and renders the game as though none had
+been selected. Re-reading the source against Iris' own shader documentation and its
+transform source, rather than against OptiFine lore, found a real cause:
+
+**`colortex0` was declared twice in the composite translation unit** — once in
+`shaders/lib/body/composite.fsh` and once in `shaders/lib/water_composite.glsl`, which the
+former includes. Two declarations of the same uniform are a redefinition, and Mesa rejects
+the program for it. With the composite pass gone, so are the sky, the clouds, the water and
+the grade: every part of the pack that is not vanilla-shaped.
+
+Three more faults were found in the same pass and are fixed: a `block.properties` written
+with backslash line continuations, a local shadowing the `near` uniform, and a water
+detection path that depended entirely on one file being parsed as expected.
+
 ## Current stage
 
-**1.0.0 implemented, statically validated, awaiting its first run in Minecraft.**
+**1.1.0 implemented, statically validated, still awaiting its first run in Minecraft.**
 
 Every pass is written and wired up. There is no placeholder, no stubbed function and no
 `TODO` in the shader source. The pack packages into a correctly rooted zip.
 
-The single biggest open item is that **nothing has been compiled by a GPU or looked at on
-screen**. That is a limitation of where this was built, not an oversight, and it is stated
-in the README rather than hidden.
+The single biggest open item is unchanged: **nothing has been compiled by a GPU or looked
+at on screen.** What has changed is that the reason the pack could have been rendering
+vanilla is identified and fixed, and the validator now has a check for that whole class of
+error. That is not the same as knowing the pack works.
 
 ---
 
@@ -28,7 +54,7 @@ in the README rather than hidden.
 - [x] Pass topology: shadow -> gbuffers -> composite -> final. Four steps, two of them
       fullscreen. No bloom chain, no deferred geometry pass, no temporal anything.
 - [x] Buffers: `colortex0` RGBA16F (forward lit scene), `colortex1` RGBA16F (composite
-      output), `colortex2` RGBA8 (water surface normal and texture modulation).
+      output), `colortex2` RGBA16F (water surface normal and texture modulation).
 - [x] Buffer formats declared in `shaders/gbuffers_terrain.fsh`, `gbuffers_water.fsh`,
       `composite.fsh` and `final.fsh`.
 
@@ -99,14 +125,41 @@ in the README rather than hidden.
       the changelog entry as the release body.
 - [x] README, CHANGELOG, LICENSE (MIT), THIRD-PARTY-NOTICES, `docs/PERFORMANCE.md`.
 
+### 1.1.0 — Iris loading path
+
+- [x] Duplicate `colortex0` declaration removed from the composite body. This is the one
+      that would have sent Iris back to vanilla rendering.
+- [x] `block.properties` rewritten with one block list per line, no continuations.
+- [x] `near` local in the shadow contact term renamed; it shadowed an Iris uniform.
+- [x] Water recognised by block ID, by Iris' legacy IDs 8 and 9, and by the render type in
+      `mc_Entity.y`. The render type also keeps lava out of the water branch when the ID
+      map has not resolved.
+- [x] `colortex2` promoted from `RGBA8` to `RGBA16F`: the packed wave normal was losing
+      about 40% of the finest octave to 8 bit quantisation.
+- [x] `separateAo = true`, so vanilla's smooth lighting occlusion reaches the lighting model
+      in the vertex alpha where the code always assumed it was. The translucent pass now
+      takes its blend alpha from the texture so this cannot thin glass at its edges.
+- [x] Cloud coverage mapping recalibrated; the previous base threshold left only about a
+      fifth of the sky carrying cloud. The reflection's cheap cloud sample matches it.
+- [x] `tools/validate.py` rejects a second global declaration of the same name.
+- [x] The loading behaviour was checked against Iris' shader documentation and transform
+      source, not against OptiFine. What that established: `#version 330 compatibility` is
+      the correct declaration for a legacy vertex stage and Iris rewrites it to core with
+      the built-ins patched; `mc_Entity` is a `vec2` and Iris patches the integer attribute
+      itself; `shadow.enabled`, `separateAo`, `clouds`, `sun`, `moon`, `stars`, `vignette`
+      and `underwaterOverlay` are all real directives; and Iris removes unused functions
+      and patches varying mismatches, so neither is fatal.
+
 ---
 
 ## Latest successful validation
 
-**CI green on `main`.** The `Validate` workflow passes: static validation, block ID
-consistency, option labels, packaging and artifact upload.
+**CI green on `main` as of the 1.0.0 release commit.** The `Validate` workflow runs the
+static validation, the block ID agreement check, the option label check, packaging and
+artifact upload. The 1.1.0 tree has not been through it yet at the time this was written:
+the push that carries this file is what runs it.
 
-The validator earned its place on the first three runs. It found:
+The validator earned its place during 1.0.0. It found:
 
 1. Its own include-expansion bug: it inlined each guarded file once per sibling, which
    made `shadowMapResolution` look like it was declared nine times over.
@@ -116,8 +169,12 @@ The validator earned its place on the first three runs. It found:
 3. A real interface gap — `composite.vsh` and `final.vsh` were the only stages in the pack
    carrying no option constants, because `uniforms.glsl` did not include `settings.glsl`.
 
-All three are fixed. **What is still not verified is everything below "Unverified by
-nature": no GPU has compiled this and no frame has been rendered.**
+It did **not** find the duplicate `colortex0` that 1.1.0 removes. That was found by reading
+the assembled composite translation unit against Iris' documentation. It is now the tenth
+check in `tools/validate.py`, so the next one is caught automatically.
+
+**What is still not verified is everything below "Unverified by nature": no GPU has
+compiled this and no frame has been rendered.**
 
 ---
 
@@ -125,16 +182,16 @@ nature": no GPU has compiled this and no frame has been rendered.**
 
 ### Unverified by nature
 
-1. **No GPU compilation has happened.** The most likely categories of failure, in
-   descending order of probability:
-   - A profile or option name that Iris parses differently than expected.
-   - `mc_Entity` not being bound as declared, which would silently disable wind rather
-     than crash.
+1. **No GPU compilation has happened.** With the duplicate declaration gone, the most
+   likely remaining categories of failure, in descending order of probability:
+   - A profile or option name that Iris parses differently than its documentation says.
    - `layout(location = N) out` combined with `DRAWBUFFERS` on the water program, which is
      the most intricate part of the interface usage in the pack.
-   - `#version 330 compatibility` and the compatibility built-ins
-     (`gl_ModelViewMatrix`, `gl_ModelViewProjectionMatrix`, `gl_TextureMatrix`,
-     `gl_NormalMatrix`) on Mesa's Intel driver.
+   - RGBA16F blending on this driver. Float blending has been core on desktop GL since 3.0
+     and Broadwell supports it, but if the water buffer comes out empty or black, the first
+     thing to try is putting `colortex2` back to `RGBA8`.
+   - `separateAo = true` behaving differently than expected. That changes how much ambient
+     occlusion the image carries; it does not break anything.
 2. **No frame rate has been measured.** The budget in `docs/PERFORMANCE.md` is arithmetic.
    It may be optimistic by a factor of two either way.
 3. **No visual output has been seen.** Colours were chosen by design against the ACES
@@ -161,9 +218,10 @@ nature": no GPU has compiled this and no frame has been rendered.**
 12. **Water writes depth**, so `depthtex0` is the water surface and `depthtex1` the floor.
     If it does not, the water column depth falls back to a view distance term and deep water
     will not darken as much as it should.
-13. **Iris parses `block.properties` and binds `mc_Entity`.** If not, wind and the whole
-    water path stop working silently, because water would then be treated as ordinary
-    translucent geometry. This is the highest risk item in the pack.
+13. **`block.properties` is parsed and `mc_Entity` is bound.** This used to be the highest
+    risk item in the pack. It is now the most defended: water is recognised three ways, and
+    if all three fail it falls through to plain translucent shading rather than breaking.
+    Wind and leaf lighting still depend on the ID map alone.
 
 ---
 
@@ -171,22 +229,31 @@ nature": no GPU has compiled this and no frame has been rendered.**
 
 In the order they should be done.
 
-1. **Run CI and fix whatever it reports.** It is the only automated check there is.
-2. **Load the pack in Minecraft 1.21.5 with Iris 1.8.x on the target machine.** Read
-   `latest.log` for shader compile errors before worrying about anything else. Iris reports
-   the failing stage and line.
-3. **Confirm assumption 13 first.** If water is invisible or renders as flat translucent
-   glass, `mc_Entity` or `block.properties` is the cause, not the water maths. Test by
-   temporarily forcing the water branch on in `gbuffers_water.fsh`.
+1. **Load the pack in Minecraft 1.21.5 with Iris 1.8.x.** Press Ctrl+D on the shader
+   selection screen first: that writes the patched source to `patched_shaders/`, which is
+   the only readable record of what Iris actually compiled. Then read `latest.log` for
+   compile errors before worrying about anything else.
+2. **Read the failure mode, not just the failure.** If the game looks exactly vanilla, the
+   pack did not load: look for a compile error. If the screen is black or white, the pack
+   loaded and a buffer link is wrong — `DRAWBUFFERS:1` on `composite.fsh`, and `final.fsh`
+   reading `colortex1`, are the two lines to check. White specifically means `final` read
+   `colortex1` before anything wrote it, because Iris clears that buffer to 1.0.
+3. **Confirm water is recognised.** If water renders as flat translucent glass, all three
+   signals in `aetherisIsWater` failed. Write `blockId` and `renderType` into the red and
+   green channels of `final` for one run to see which.
 4. **Calibrate exposure.** Stand somewhere flat at noon, with `COLOR_EXPOSURE = 1.0`, and
    compare against the daylight target in `docs/PERFORMANCE.md`. Adjust `SUN_STRENGTH` and
    `AMBIENT_STRENGTH` before touching the palette.
 5. **Calibrate the sunset.** The golden hour band strength (`0.80` in `aetherisSkyGradient`)
    and the anti solar cooling are the two most likely to be wrong.
-6. **Measure.** Press F3, note frame time at 1280x720, and record it in the README. Then
+6. **Calibrate the cloud deck.** The base threshold in `aetherisCloudDensity` was moved from
+   0.645 to 0.565 by reasoning about the noise distribution, not by looking at it. If the
+   deck is now too heavy, `CLOUD_COVERAGE` is the slider; if it is too thin at the default,
+   the threshold needs another 0.02 rather than the slider.
+7. **Measure.** Press F3, note frame time at 1280x720, and record it in the README. Then
    decide whether the Balanced preset should move.
-7. **Tune the water** using the table at the end of `docs/PERFORMANCE.md`.
-8. **Then** consider 1.1.0: bloom if the budget allows it after measurement, or a
+8. **Tune the water** using the table at the end of `docs/PERFORMANCE.md`.
+9. **Then** consider 1.2.0: bloom if the budget allows it after measurement, or a
    half-resolution cloud march into a separate buffer if the sky turns out to be the
    bottleneck.
 
@@ -194,7 +261,9 @@ In the order they should be done.
 
 ## Interrupted operations
 
-None. The 1.0.0 tree is complete and self-consistent as committed.
+None in the 1.1.0 tree. The 1.0.1 tree was written but never committed and never released;
+its two fixes are in 1.1.0, and its changelog entry was folded into the 1.1.0 entry rather
+than left pointing at a release that does not exist.
 
 ---
 

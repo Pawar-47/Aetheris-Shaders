@@ -20,6 +20,11 @@ out vec3 playerNormal;
 out vec4 tint;
 out float blockId;
 
+/* Iris fills mc_Entity.y with the render type: 1.0 for a fluid, -1.0 for everything
+ * else. It is the second, independent way of recognising water, and the water pass
+ * uses it when the block ID map has not resolved. Carrying it costs one interpolator. */
+out float renderType;
+
 void main() {
     vec4 viewPosition = gl_ModelViewMatrix * gl_Vertex;
     vec3 worldPosition = (gbufferModelViewInverse * viewPosition).xyz;
@@ -43,4 +48,5 @@ void main() {
     playerPosition = worldPosition;
     playerNormal = worldNormal;
     blockId = mc_Entity.x;
+    renderType = mc_Entity.y;
 }

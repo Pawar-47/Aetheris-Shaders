@@ -25,6 +25,10 @@ rules of the Iris dialect specifically:
      outputs.
   8. shadowMapResolution and shadowDistance are declared exactly once per unit.
   9. Every option referenced by shaders.properties exists in settings.glsl.
+ 10. No global name is declared twice in one translation unit. A second declaration of
+     the same uniform or constant is a redefinition, and one rejected program is enough
+     for Iris to drop the whole pack and render vanilla. This check exists because that
+     is exactly what a duplicate `colortex0` did to 1.0.0.
 
 What this does NOT do, and what the README says plainly: it does not prove the pack
 compiles on a GPU, and it cannot check runtime behaviour, visual quality or frame
@@ -217,6 +221,34 @@ IN_RE = re.compile(r'^\s*(?:flat\s+|smooth\s+|noperspective\s+)?in\s+(\w+)\s+(\w
 LAYOUT_OUT_RE = re.compile(r'layout\s*\(\s*location\s*=\s*(\d+)\s*\)\s*out\s+\w+\s+\w+\s*;')
 DRAWBUFFERS_RE = re.compile(r'/\*\s*DRAWBUFFERS\s*:\s*([0-9]+)\s*\*/')
 
+# Globals in this pack sit at column 0 and function locals are indented, so anchoring
+# at column 0 keeps a `const float a` inside one function from colliding with the same
+# name inside another.
+GLOBAL_DECL_RE = re.compile(
+    r'^(?:uniform|const)\s+\w+\s+(\w+)\s*(?:\[[^\]]*\])?\s*(?:=|;)',
+    re.MULTILINE)
+
+
+def check_duplicate_declarations(label, stripped):
+    """A second declaration of the same global name is a redefinition.
+
+    This is the check that would have caught the duplicate `uniform sampler2D colortex0`
+    that a composite body and one of its includes both declared. Nothing else here sees
+    it: every file is individually valid, every include resolves, and every call has a
+    definition. It only exists once the unit is assembled, which is exactly where a
+    compiler finds it and where a per-file validator cannot.
+    """
+    seen = {}
+    for match in GLOBAL_DECL_RE.finditer(stripped):
+        name = match.group(1)
+        line = stripped.count("\n", 0, match.start()) + 1
+        if name in seen:
+            fail("%s: '%s' is declared twice (lines %d and %d); a second global "
+                 "declaration of the same name is a redefinition"
+                 % (label, name, seen[name], line))
+        else:
+            seen[name] = line
+
 
 def check_unit(label, text):
     stripped = strip_comments(text)
@@ -236,6 +268,7 @@ def check_unit(label, text):
 
     check_balance(label, stripped)
     check_calls(label, stripped, collect_definitions(stripped))
+    check_duplicate_declarations(label, stripped)
 
 
 def declared_varyings(regex, text):

@@ -74,8 +74,14 @@ float aetherisCloudDensity(vec2 worldXZ, float g, vec2 wind, vec2 lightXZ,
     mass += erosion * 0.17 * smoothstep(0.12, 0.92, g);
 #endif
 
-    float threshold = mix(0.78, 0.48, saturate(CLOUD_COVERAGE));
-    threshold += smoothstep(0.08, 1.0, g) * 0.30;
+    // One octave of value noise concentrates hard around 0.5, so the base threshold is
+    // what actually decides how much of the sky carries cloud. At 0.645 only about a
+    // fifth of the field survived and the deck read as a few wisps rather than as
+    // weather; at 0.565 the base is a continuous sheet. The threshold still rises with
+    // height, so the crowns break into separate rounded puffs instead of the whole slab
+    // ending in a flat cut.
+    float threshold = mix(0.70, 0.40, saturate(CLOUD_COVERAGE));
+    threshold += smoothstep(0.08, 1.0, g) * 0.34;
 
     float density = saturate((mass - threshold) * 2.3);
 

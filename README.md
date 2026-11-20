@@ -9,9 +9,24 @@ integrated GPU, with BSL Shaders as its artistic reference. Where BSL's look com
 particular way of handling light, atmosphere and water, this pack studies that principle
 and re-derives its own version of it at a fraction of the cost.
 
-**Status: 1.0.0. Statically validated, not yet run in a game.** See
+**Status: 1.1.0. Statically validated, not yet run in a game.** See
 [What has and has not been verified](#what-has-and-has-not-been-verified) before you
 expect anything from it.
+
+### Iris, not OptiFine
+
+This pack is written for **Iris**, and it relies on directives OptiFine does not have:
+
+- `separateAo`, which is how vanilla's smooth lighting occlusion reaches the lighting
+  model, in the vertex colour's alpha rather than baked into the albedo.
+- `shadow.enabled`, so the Performance preset removes the shadow pass instead of leaving it
+  running and unsampled.
+- The render type in `mc_Entity.y`, which is the water pipeline's fallback when the block
+  ID map has not resolved.
+
+It is not tested under OptiFine and is not meant to be. Two of those three degrade silently
+there rather than loudly, and a shader pack that half works is worse than one that does not
+load at all.
 
 ---
 
@@ -90,6 +105,19 @@ decision is what allows real refraction without a second copy of the frame: the 
 pass samples the actual lake bed at an offset along the surface slope, and what it reads
 is genuinely what is under the water, not a screen-space blur of something that already
 had water mixed into it.
+
+Two things downstream of that decision were wrong until 1.1.0 and are worth stating,
+because both are the kind of fault that does not look like a fault:
+
+- The data buffer was `RGBA8`, so the packed normal carried about 40% quantisation noise on
+  the finest wave octave — steppy water, not smooth water. It is `RGBA16F` now, written
+  only on water pixels and read once.
+- Water was recognised by one signal: its block ID from `block.properties`. It is now
+  recognised by the ID, by Iris' legacy IDs 8 and 9, and by the render type in
+  `mc_Entity.y`, with the render type keeping lava out of the branch when the ID map has
+  not resolved. If all three fail, water falls through to the plain translucent path and
+  looks like vanilla water, which is a very quiet way for the pack's headline feature to
+  disappear.
 
 From there, in the order light actually takes:
 
@@ -217,6 +245,10 @@ back to vanilla rendering.
 - Every option named in `shaders.properties` exists in `settings.glsl`, and every option
   has a label.
 - `block.properties` IDs agree with the constants in `vegetation.glsl`.
+- No global name is declared twice in one translation unit. This check exists because a
+  duplicate `colortex0` in the composite pass is what took 1.0.0 down to vanilla rendering:
+  Mesa rejects the redefinition, and one rejected program is all it takes for Iris to drop
+  the pack.
 - The pack zips into the correct layout.
 
 **Not verified**

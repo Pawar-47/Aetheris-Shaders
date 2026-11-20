@@ -6,6 +6,62 @@ All notable changes to Aetheris Shaders are recorded here. The format follows
 
 A release is made when there is something worth installing, not when a number changes.
 
+## [1.1.0] - 2026-11-25
+
+The first release after 1.0.0, and the first one whose Iris loading path was checked against
+Iris' own documentation and transform source rather than against OptiFine lore. It also
+folds in two fixes that were written for a 1.0.1 that was never committed and never
+published.
+
+### Fixed
+
+- **A duplicate uniform declaration in the composite translation unit.** `colortex0` was
+  declared both by `lib/body/composite.fsh` and by `lib/water_composite.glsl`, which the
+  former includes. Two declarations of the same uniform in one unit are a redefinition and
+  Mesa rejects the program for it. One rejected program is enough for Iris to drop the pack
+  and render the game as if no shader were selected, which is exactly the reported symptom:
+  the pack looked identical to vanilla.
+- `block.properties` used backslash line continuations. The Java properties format allows
+  them; a loader that reads the file line by line does not, and a continuation line parsed
+  as a bare key is at best ignored and at worst rejects the file. Every entry is now one
+  line.
+- A local named `near` in the shadow contact term shadowed Iris' `near` uniform. Legal, and
+  not worth the risk.
+- Screen space ambient occlusion oriented its reconstructed normal away from the camera, so
+  the occlusion samples sat inside the surface. Creases read as fully lit and open surfaces
+  as fully occluded. The normal is now oriented by the vector to the eye rather than by the
+  sign of its z component.
+- `normalize(toEye + lightDir)` in the water glitter term is undefined when the eye is
+  exactly opposite the light relative to the surface, and one NaN spreads through the
+  tonemapper and blacks out the frame. Guarded with an epsilon.
+
+### Changed
+
+- **Water is recognised three ways instead of one.** The block ID from `block.properties`
+  stays primary; Iris' legacy numbering (8 and 9, used when the file is absent) and the
+  render type in `mc_Entity.y` are now fallbacks, and the render type keeps lava out of the
+  water branch when the ID map has not resolved. The whole water pipeline hanging on one
+  file being parsed was the largest silent failure point in the pack.
+- **The water data buffer is `RGBA16F` instead of `RGBA8`.** The surface normal was packed
+  into two 8 bit channels, which left roughly 40% quantisation noise on the finest wave
+  octave. The buffer is written only on water pixels and read once, so 4 extra bytes per
+  pixel are affordable and the surface stops being steppy.
+- `separateAo = true`. Vanilla's smooth lighting occlusion now arrives in the vertex colour's
+  alpha, which is where the lighting model always assumed it was, instead of being baked
+  into the albedo. The translucent pass takes its blend alpha from the texture rather than
+  from the vertex colour so this cannot make glass more transparent at its edges.
+- The cloud coverage mapping was recalibrated. A single octave of value noise concentrates
+  around 0.5, so the previous base threshold left only about a fifth of the sky carrying
+  cloud and the deck read as wisps rather than as weather. `CLOUD_COVERAGE` now spans a
+  sparse deck at 0 to an overcast one at 1, and the cheap cloud sample used by water
+  reflections matches it.
+
+### Added
+
+- The static validator rejects a second global declaration of the same name, which is the
+  class of error that took the pack down to vanilla.
+- The README states plainly that this pack is Iris only, and which directives make it so.
+
 ## [1.0.0] - 2026-11-24
 
 First release. A complete, independent shader pack: three passes (shadow, geometry,

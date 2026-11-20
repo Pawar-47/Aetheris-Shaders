@@ -70,9 +70,15 @@ float aetherisSSAO(vec2 uv, float depth) {
     if (normalLength < 1.0e-9) return 1.0;
     normal /= normalLength;
 
-    // Face the normal towards the camera. View space looks down -Z, so a normal with
-    // a positive Z is pointing away.
-    if (normal.z > 0.0) normal = -normal;
+    // Orient the normal towards the eye rather than assuming which way the cross
+    // product came out. The eye sits at the origin in view space, so the direction from
+    // the surface to the eye is -centre; the normal is correct when it has a negative
+    // dot with centre.
+    //
+    // Getting this backwards is not a subtle failure: the sample points would sit
+    // inside the surface, every crease would read as fully lit and every open surface
+    // as fully occluded.
+    if (dot(normal, centre) > 0.0) normal = -normal;
 
     // Any orthonormal pair will do, as long as it is stable when the normal is
     // vertical.
