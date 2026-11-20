@@ -1,0 +1,78 @@
+name: Release
+
+# Fires when VERSION changes on main, which is the only thing that should create a
+# release. A release is a statement that the pack in that zip is worth installing,
+# so it is tied to a deliberate edit rather than to every push.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "VERSION"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Static validation
+        run: python3 tools/validate.py
+
+      - name: Read version
+        id: version
+        run: echo "version=$(tr -d ' \t\r\n' < VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether this version is already released
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${{ steps.version.outputs.version }}" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          chmod +x tools/package.sh
+          tools/package.sh
+
+      - name: Take the release body from the changelog
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          # The first "## [" section of CHANGELOG.md is the entry for this version.
+          awk 'BEGIN { n = 0 } /^## \[/ { n++ } n == 1 { print }' CHANGELOG.md > build/BODY.md
+          if [ ! -s build/BODY.md ]; then
+            echo "No changelog entry found" >&2
+            exit 1
+          fi
+          cat build/BODY.md
+
+      - name: Publish release
+        if: steps.check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Aetheris Shaders v${{ steps.version.outputs.version }}
+          body_path: build/BODY.md
+          files: build/*.zip
+          draft: false
+          prerelease: false

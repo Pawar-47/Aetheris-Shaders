@@ -1,0 +1,69 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Static validation and packaging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Static validation
+        run: python3 tools/validate.py
+
+      - name: Check that block properties agree with the shader constants
+        run: |
+          # The ID map in block.properties and the constants in vegetation.glsl are
+          # two files that must agree. Nothing enforces that at runtime, so it is
+          # enforced here.
+          set -e
+          for id in 10000 10100 10200 10300; do
+            if ! grep -q "^block\.${id}=" shaders/block.properties; then
+              echo "block.properties is missing id ${id}" >&2
+              exit 1
+            fi
+            if ! grep -q "AETHERIS_ID_.*= ${id}\.0" shaders/lib/vegetation.glsl; then
+              echo "vegetation.glsl declares no constant for id ${id}" >&2
+              exit 1
+            fi
+          done
+          echo "block IDs agree"
+
+      - name: Check that every option has a label
+        run: |
+          set -e
+          missing=0
+          for option in $(grep -oP '^\s*#define\s+\K[A-Z0-9_]+' shaders/lib/settings.glsl) \
+                        $(grep -oP '^const\s+(?:int|float|bool)\s+\K\w+' shaders/lib/settings.glsl); do
+            if ! grep -q "^option\.${option}=" shaders/lang/en_us.lang \
+               && [ "$option" != "DETAIL_FADE_START" ] \
+               && [ "$option" != "DETAIL_FADE_END" ] \
+               && [ "$option" != "AETHERIS_SETTINGS_GLSL" ]; then
+              echo "no lang entry for option ${option}" >&2
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Package
+        run: |
+          chmod +x tools/package.sh
+          tools/package.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aetheris-shaders-zip
+          path: build/*.zip
+          if-no-files-found: error

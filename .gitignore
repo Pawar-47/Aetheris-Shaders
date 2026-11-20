@@ -1,0 +1,17 @@
+# Build output
+build/
+*.zip
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+
+# Gradle, in case the ascpixi template's build is ever adopted here
+.gradle/

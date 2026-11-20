@@ -1,0 +1,82 @@
+# Aetheris Shaders - option names as shown in the Shader Pack Settings screen.
+# Iris falls back to the raw option name if a key is missing here.
+
+screen.SCENE=Aetheris Scene
+screen.WATER=Aetheris Water
+screen.QUALITY=Aetheris Quality
+screen.COLOUR=Aetheris Colour
+
+profile=Preset
+profile.DEFAULT=Balanced
+profile.PERFORMANCE=Performance
+profile.VISUAL=Visual
+
+option.SUN_STRENGTH=Sunlight strength
+option.AMBIENT_STRENGTH=Ambient strength
+option.BLOCKLIGHT_STRENGTH=Block light strength
+option.FOG_DENSITY=Fog density
+option.FOG_HEIGHT=Fog height
+option.CLOUD_COVERAGE=Cloud coverage
+option.CLOUD_ALTITUDE=Cloud altitude
+option.CLOUD_SCALE=Cloud scale
+option.CLOUD_SPEED=Cloud speed
+
+option.WATER_WAVE_HEIGHT=Wave height
+option.WATER_WAVE_SPEED=Wave speed
+option.WATER_CLARITY=Water clarity
+option.WATER_REFRACTION=Refraction strength
+option.WATER_REFLECTIONS=Water reflections
+option.REFLECTION_STEPS=Reflection steps
+option.UNDERWATER_TINT=Underwater tint
+
+option.SHADOWS=Shadows
+option.shadowMapResolution=Shadow resolution
+option.shadowDistance=Shadow distance
+option.SHADOW_SAMPLES=Shadow samples
+option.SHADOW_SOFTNESS=Shadow softness
+option.SSAO=Ambient occlusion
+option.SSAO_SAMPLES=Occlusion samples
+option.CLOUDS=Clouds
+option.CLOUD_STEPS=Cloud steps
+option.CLOUD_DETAIL=Cloud detail
+option.CLOUD_CIRRUS=Cirrus layer
+option.VEGETATION_WIND=Vegetation wind
+option.WATER_WAVES=Water waves
+option.ANTI_ALIASING=Anti aliasing
+
+option.COLOR_EXPOSURE=Exposure
+option.COLOR_TEMPERATURE=Temperature
+option.COLOR_SATURATION=Saturation
+option.COLOR_CONTRAST=Contrast
+option.COLOR_VIGNETTE=Vignette
+
+value.SHADOWS.0=Off
+value.SHADOWS.1=On
+value.SHADOW_SAMPLES.4=4 taps
+value.SHADOW_SAMPLES.6=6 taps
+value.SHADOW_SAMPLES.9=9 taps
+value.SSAO.0=Off
+value.SSAO.1=On
+value.SSAO_SAMPLES.4=4 samples
+value.SSAO_SAMPLES.6=6 samples
+value.SSAO_SAMPLES.9=9 samples
+value.WATER_REFLECTIONS.0=Off
+value.WATER_REFLECTIONS.1=On
+value.REFLECTION_STEPS.6=6 steps
+value.REFLECTION_STEPS.8=8 steps
+value.REFLECTION_STEPS.10=10 steps
+value.CLOUDS.0=Off
+value.CLOUDS.1=On
+value.CLOUD_STEPS.5=5 steps
+value.CLOUD_STEPS.8=8 steps
+value.CLOUD_STEPS.12=12 steps
+value.CLOUD_DETAIL.0=Off
+value.CLOUD_DETAIL.1=On
+value.CLOUD_CIRRUS.0=Off
+value.CLOUD_CIRRUS.1=On
+value.VEGETATION_WIND.0=Off
+value.VEGETATION_WIND.1=On
+value.WATER_WAVES.0=Off
+value.WATER_WAVES.1=On
+value.ANTI_ALIASING.0=Off
+value.ANTI_ALIASING.1=On
