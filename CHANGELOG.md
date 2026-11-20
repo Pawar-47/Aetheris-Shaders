@@ -6,6 +6,32 @@ All notable changes to Aetheris Shaders are recorded here. The format follows
 
 A release is made when there is something worth installing, not when a number changes.
 
+## [1.5.4] - 2026-12-01
+
+A full pass over the pack rather than a reaction to a log line.
+
+### Verified rather than changed
+
+- **Buffer wiring is consistent end to end.** The colour pipeline is `colortex0` throughout:
+  every `gbuffers_*` writes it, `composite` reads and writes it, `final` reads it. The water
+  mask and surface normal are in `colortex2`, written by `gbuffers_water` at
+  `RENDERTARGETS: 0,2` and read by `composite`. Nothing still refers to the `colortex1` that
+  1.5.0 removed, and `depthtex1` remains only where opaque-only depth is genuinely wanted
+  (the water column and the reflection march).
+- All 22 program names are programs Iris actually has.
+- All 46 stages compile as GLSL 3.30 core after the rewrite Iris performs.
+- `near`/`far`, `depthtex0/1`, `shadowtex0`, `gtexture` and `mc_Entity` are used the way
+  Iris documents them; no reserved word is used as an identifier; no built-in is shadowed.
+
+### Added
+
+- The compiler check now **links** each program's vertex and fragment stage as well as
+  compiling them separately. Varying mismatches, duplicate output locations and names
+  declared in only one stage all fail there, and Iris fails on all of them.
+- The validator now fails on a wrapper named for a program Iris does not have. Iris ignores
+  such a file in silence and draws that geometry with its own shader, which is
+  indistinguishable from "the pack is doing nothing" for that pass.
+
 ## [1.5.3] - 2026-12-01
 
 Iris reported `'RGBA16F' undeclared` in composite, and it was right: the buffer format

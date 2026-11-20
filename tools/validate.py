@@ -449,6 +449,35 @@ def parse_options():
     return options
 
 
+IRIS_PROGRAMS = set("""
+gbuffers_basic gbuffers_line gbuffers_textured gbuffers_textured_lit gbuffers_skybasic
+gbuffers_skytextured gbuffers_clouds gbuffers_terrain gbuffers_terrain_solid
+gbuffers_terrain_cutout gbuffers_damagedblock gbuffers_block gbuffers_beaconbeam
+gbuffers_entities gbuffers_entities_glowing gbuffers_entities_translucent
+gbuffers_armor_glint gbuffers_spidereyes gbuffers_hand gbuffers_hand_water gbuffers_weather
+gbuffers_water shadow shadow_solid shadow_cutout final
+""".split())
+
+SUFFIXED_PROGRAMS = ("composite", "deferred", "begin", "prepare", "setup", "shadowcomp")
+
+
+def check_program_name(name):
+    """Fail on a wrapper Iris does not know.
+
+    A file named for a program that does not exist is ignored in silence: no error, no
+    warning, and that geometry is drawn by Iris' own shader instead. The visible result is
+    that the pack looks like it is not doing anything for that pass, which is the hardest
+    kind of failure to tell apart from a pack that is not loaded at all.
+    """
+    if name in IRIS_PROGRAMS:
+        return
+    for prefix in SUFFIXED_PROGRAMS:
+        if name == prefix or (name.startswith(prefix) and name[len(prefix):].isdigit()):
+            return
+    fail("%s: Iris has no program by this name, so these files are ignored and that pass "
+         "falls back to Iris' own shader — check the spelling" % name)
+
+
 def check_options():
     options = parse_options()
     known = set(options)
@@ -524,6 +553,7 @@ def main():
             fail("required program '%s' is missing" % name)
 
     for name, stages in sorted(programs.items()):
+        check_program_name(name)
         if "vsh" not in stages:
             fail("%s has no vertex stage" % name)
             continue

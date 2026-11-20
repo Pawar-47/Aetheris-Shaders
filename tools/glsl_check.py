@@ -115,28 +115,59 @@ def check(name, path, stage, workdir):
     if result.returncode == 0:
         return None, unit, ""
 
+    return describe(result, target, path, unit), unit, context_for(result, target, unit)
+
+
+def link(name, stages, workdir):
+    """Link the two stages together, which is what Iris does and what a per-stage check misses.
+
+    This is the check for the interface: a varying the fragment reads but the vertex writes as
+    a different type, two outputs at the same location, a name only one stage declares. Iris
+    fails on all of those with a message pointing at the driver, and they are invisible when
+    each stage is compiled on its own.
+    """
+    vert = os.path.join(workdir, "%s.vert" % name)
+    frag = os.path.join(workdir, "%s.frag" % name)
+    if not (os.path.isfile(vert) and os.path.isfile(frag)):
+        return None
+
+    result = subprocess.run(
+        ["glslangValidator", "-l", vert, frag],
+        capture_output=True, text=True)
+
+    if result.returncode == 0:
+        return None
+
+    text = (result.stdout + result.stderr).replace(vert, "%s.vsh" % name).replace(frag, "%s.fsh" % name)
+    return text
+
+
+def describe(result, target, path, unit):
+    return (result.stdout + result.stderr).replace(target, os.path.basename(path))
+
+
+def context_for(result, target, unit):
     # glslang reports line numbers of the rewritten file; STUB_LINES at the top belong to
-    # the stubs, so subtract them to point at the expanded unit, and show that line.
-    message = (result.stdout + result.stderr).replace(target, os.path.basename(path))
+    # the stubs, so subtract them and show that line from the expanded source.
+    message = result.stdout + result.stderr
     expanded = unit.splitlines()
     context = []
     for raw in message.splitlines():
         if ":" not in raw:
             continue
-        parts = raw.split(":")
-        for part in parts:
-            if part.strip().isdigit():
-                reported = int(part.strip())
-                index = reported - STUB_LINES - 1
-                if 0 <= index < len(expanded):
-                    lo = max(0, index - 2)
-                    hi = min(len(expanded), index + 3)
-                    for offset in range(lo, hi):
-                        marker = ">>" if offset == index else "  "
-                        context.append("%s %s" % (marker, expanded[offset].rstrip()))
-                    context.append("")
-                break
-    return message, unit, "\n".join(context)
+        for part in raw.split(":"):
+            if not part.strip().isdigit():
+                continue
+            index = int(part.strip()) - STUB_LINES - 1
+            if 0 <= index < len(expanded):
+                lo = max(0, index - 2)
+                hi = min(len(expanded), index + 3)
+                for offset in range(lo, hi):
+                    marker = ">>" if offset == index else "  "
+                    context.append("%s %s" % (marker, expanded[offset].rstrip()))
+                context.append("")
+            break
+    return "\n".join(context)
 
 
 def main():
@@ -152,6 +183,7 @@ def main():
     workdir = tempfile.mkdtemp(prefix="aetheris-glsl-")
     failures = 0
     checked = 0
+    programs = {}
 
     try:
         for entry in sorted(os.listdir(SHADERS)):
@@ -160,6 +192,7 @@ def main():
             path = os.path.join(SHADERS, entry)
             stage = "vert" if entry.endswith(".vsh") else "frag"
             name = entry[:entry.rindex(".")]
+            programs.setdefault(name, []).append(stage)
             message, _, context = check(name, path, stage, workdir)
             checked += 1
             if message is None:
@@ -172,15 +205,27 @@ def main():
                 print("")
                 print("the expanded source around the report:")
                 print(context)
+
+        print("")
+        for name in sorted(programs):
+            if "vert" not in programs[name] or "frag" not in programs[name]:
+                continue
+            message = link(name, programs[name], workdir)
+            if message is None:
+                continue
+            failures += 1
+            print("=" * 70)
+            print("%s does not link:" % name)
+            print(message.rstrip())
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 
     print("")
     if failures:
-        print("%d of %d stages failed the GLSL check." % (failures, checked))
+        print("%d stage(s) or program(s) failed the GLSL check." % failures)
         return 1
 
-    print("All %d stages compile as GLSL 3.30 core." % checked)
+    print("All %d stages compile, and every program links." % checked)
     return 0
 
 
