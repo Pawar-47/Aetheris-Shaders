@@ -533,6 +533,40 @@ def check_options():
                          "allowed values" % (key, option, preset_value))
 
 
+def check_performance_profile():
+    """Keep the low-end preset feature-complete; quality may fall, effects may not vanish."""
+    properties = read_text(os.path.join(SHADERS, "shaders.properties"))
+    match = re.search(r"^profile\\.PERFORMANCE\\s*=\\s*(.*)$", properties, re.MULTILINE)
+    if not match:
+        fail("shaders.properties: profile.PERFORMANCE is missing")
+        return
+    values = {}
+    for token in match.group(1).split():
+        if "=" in token:
+            name, value = token.split("=", 1)
+            values[name] = value
+    required = {
+        "SHADOWS": "1", "SSAO": "1", "WATER_REFLECTIONS": "1",
+        "CLOUDS": "1", "CLOUD_DETAIL": "1", "CLOUD_CIRRUS": "1",
+        "WATER_WAVES": "1", "ANTI_ALIASING": "1", "BLOOM": "1",
+        "VOLUMETRIC_LIGHT": "1", "MATERIAL_GLOSS": "1",
+    }
+    for name, expected in required.items():
+        if values.get(name) != expected:
+            fail("profile.PERFORMANCE: %s must remain enabled (expected %s)" % (name, expected))
+    if values.get("shadowDistanceRenderMul") != "1.0":
+        fail("profile.PERFORMANCE: shadowDistanceRenderMul must enable real shadow-pass culling")
+    for buffer in ("colortex3", "colortex4"):
+        if not re.search(r"^size\\.buffer\\.%s\\s*=\\s*0\\.25\\s+0\\.25$" % buffer,
+                         properties, re.MULTILINE):
+            fail("shaders.properties: %s must remain a quarter-resolution composite buffer" % buffer)
+    for program in ("composite1", "composite2"):
+        if not re.search(r"^program\\.%s\\.enabled\\s*=.*(?:BLOOM|VOLUMETRIC_LIGHT)" % program,
+                         properties, re.MULTILINE):
+            fail("shaders.properties: %s must be conditionally enabled for retained low-resolution effects"
+                 % program)
+
+
 def main():
     if not os.path.isdir(SHADERS):
         print("FATAL: no shaders/ directory")
@@ -603,6 +637,7 @@ def main():
                 warn("lib/body/%s is not included by any program" % entry)
 
     check_options()
+    check_performance_profile()
 
     for message in WARNINGS:
         print("warning: %s" % message)

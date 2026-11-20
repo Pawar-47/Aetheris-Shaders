@@ -254,7 +254,10 @@ vec3 aetherisRenderCirrus(vec3 dir, AetherisSky sky, vec3 skyColour) {
     if (dirY < 0.015) return skyColour;
 
     // Project onto a much higher, flatter plane than the cumulus deck.
+    float horizonFade = smoothstep(0.015, 0.22, dirY);
+    if (horizonFade < 0.001) return skyColour;
     float planeDistance = (1700.0 - cameraPosition.y) / dirY;
+    if (planeDistance <= 0.0) return skyColour;
 
     vec2 wind = vec2(frameTimeCounter * 0.0092, frameTimeCounter * 0.0035) * CLOUD_SPEED;
     vec2 p = (cameraPosition.xz + dir.xz * planeDistance) * (1.0 / 900.0) + wind;
@@ -262,10 +265,11 @@ vec3 aetherisRenderCirrus(vec3 dir, AetherisSky sky, vec3 skyColour) {
     // Stretched hard along x and squashed on y: cirrus is streaked by wind shear,
     // not puffy.
     vec2 streak = vec2(p.x * 0.34, p.y * 1.85);
+    float threshold = mix(0.62, 0.42, saturate(CLOUD_COVERAGE));
     float veil = fbm2(streak);
-    float wisps = fbm2(streak * 2.7 + vec2(9.0, 4.0));
-
-    float density = saturate((veil * 0.72 + wisps * 0.28 - mix(0.62, 0.42, saturate(CLOUD_COVERAGE))) * 2.6);
+    if (veil < (threshold - 0.28) / 0.72) return skyColour;
+    float wisps = valueNoise(streak * 2.7 + vec2(9.0, 4.0));
+    float density = saturate((veil * 0.72 + wisps * 0.28 - threshold) * 2.6);
     if (density < 0.01) return skyColour;
 
     // Thin ice catches the sun almost additively: it is bright on the sun side and
@@ -275,8 +279,6 @@ vec3 aetherisRenderCirrus(vec3 dir, AetherisSky sky, vec3 skyColour) {
     vec3 tint = sky.ambientSky * 2.6 + sky.sunRadiance * (0.35 + 0.85 * glow);
 
     // Fade out at the horizon so the veil does not become a hard band.
-    float horizonFade = smoothstep(0.015, 0.22, dirY);
-
     return mix(skyColour, tint, saturate(density) * 0.18 * horizonFade);
 #endif
 }

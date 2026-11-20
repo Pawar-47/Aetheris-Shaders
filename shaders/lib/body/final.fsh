@@ -8,14 +8,13 @@
  * Here it is antialiased, exposed, tone mapped, graded and encoded for the screen, in that
  * order, once.
  *
- * It reads colortex0, which is also what composite writes. That is the same single buffer
- * layout the Iris 1.21.5 template uses: one colour attachment, read and written by the
- * fullscreen passes, with the loader flipping between two physical textures so a pass can
- * read what the previous one wrote. There is no second colour buffer, and therefore no way
- * for this pass to read an attachment that nothing has filled.
+ * It reads the full-resolution scene in colortex0 plus one quarter-resolution effects
+ * buffer. composite1 and composite2 create that buffer only when bloom or volumetric light
+ * shafts are enabled; final upsamples it before tone mapping.
  */
 
 uniform sampler2D colortex0;
+uniform sampler2D colortex4;
 
 in vec2 texcoord;
 
@@ -26,6 +25,10 @@ void main() {
     vec3 hdr = aetherisFXAA(colortex0, texcoord);
 #else
     vec3 hdr = texture(colortex0, texcoord).rgb;
+#endif
+
+#if BLOOM == 1 || VOLUMETRIC_LIGHT == 1
+    hdr += texture(colortex4, texcoord).rgb;
 #endif
 
     outColor = vec4(aetherisFinish(hdr, texcoord, gl_FragCoord.xy), 1.0);

@@ -8,12 +8,10 @@
 /* The forward lighting model.
  *
  * This pack lights geometry where the albedo is, in the geometry pass, instead of
- * writing a G buffer and lighting it later. That is a deliberate choice for a 24 EU
- * part and it is the single biggest structural decision in the pack:
- *
- *   - No G buffer means no full resolution RGBA16F albedo/normal write and read on a
- *     25 GB/s shared bus. At 1280x720 that is roughly 3.7 MB written and 3.7 MB read
- *     per frame that simply does not happen.
+ * writing a G buffer and lighting it later. Intel's 5th-gen guide lists three texture
+ * samplers and notes that some Core i3 SKUs expose 23 active EUs. The 25.6 GB/s memory
+ * figure is only the dual-channel maximum, so this design avoids full-resolution
+ * intermediate G-buffers.
  *   - No deferred reconstruction means no view position rebuild per pixel and no
  *     second round of shadow lookups for the same fragment.
  *   - Overdraw is the cost, and on Minecraft terrain it is small: mostly solid,
@@ -29,6 +27,7 @@
 const int AETHERIS_MAT_DEFAULT  = 0;
 const int AETHERIS_MAT_FOLIAGE  = 1;
 const int AETHERIS_MAT_EMISSIVE = 2;
+const int AETHERIS_MAT_GLOSS    = 3;
 
 /* Map a block ID from block.properties onto a shading path. Unlisted blocks, and
  * every block if block.properties is ever missing, fall through to default shading.
@@ -39,6 +38,7 @@ int aetherisMaterialFromId(float id) {
         return AETHERIS_MAT_FOLIAGE;
     }
     if (aetherisIsId(id, AETHERIS_ID_EMISSIVE)) return AETHERIS_MAT_EMISSIVE;
+    if (aetherisIsId(id, AETHERIS_ID_GLOSS)) return AETHERIS_MAT_GLOSS;
     return AETHERIS_MAT_DEFAULT;
 }
 
@@ -81,8 +81,6 @@ void aetherisDirectLight(AetherisSky sky, out vec3 lightDir, out vec3 lightColou
  */
 vec3 aetherisShadeSurface(vec3 albedo, vec3 normal, vec3 playerPos, vec2 lightmap,
                           float ao, int material, AetherisSky sky) {
-    vec3 viewDir = normalize(-playerPos);
-
     float skyLight = aetherisSkyLightCurve(lightmap.x);
     float blockLight = aetherisBlockLightCurve(lightmap.y);
 
@@ -96,10 +94,16 @@ vec3 aetherisShadeSurface(vec3 albedo, vec3 normal, vec3 playerPos, vec2 lightma
     // night time scene and every fully dark cave takes this path, which is worth
     // six taps a pixel on a part this small.
     float shadow = 1.0;
-    if (skyLight > 0.003 && NdotL > 0.0
-        && (lightColour.r + lightColour.g + lightColour.b) > 0.0008) {
-        shadow = sampleShadow(playerPos, normal, NdotL);
+    float contact = 1.0;
+#if SHADOWS == 1
+    float eyeDistance = length(playerPos);
+    bool needsDirectShadow = skyLight > 0.003 && NdotL > 0.0
+        && (lightColour.r + lightColour.g + lightColour.b) > 0.0008;
+    bool needsContactShadow = eyeDistance < 20.0;
+    if (needsDirectShadow || needsContactShadow) {
+        shadow = sampleShadow(playerPos, normal, NdotL, eyeDistance, contact);
     }
+#endif
 
     // Wrapped diffuse. A pure Lambert terminator across one face of a block reads as
     // a hard painted line; a little wrap softens it without turning stone to felt.
@@ -131,9 +135,7 @@ vec3 aetherisShadeSurface(vec3 albedo, vec3 normal, vec3 playerPos, vec2 lightma
     // lookup above, and darkening a sunlit face for a crease it is not in is the classic
     // way contact shadows turn into dirt.
 #if SHADOWS == 1
-    float eyeDistance = length(playerPos);
     if (eyeDistance < 20.0) {
-        float contact = sampleShadowContact(playerPos, normal, NdotL);
         ambient *= mix(1.0, contact, 1.0 - smoothstep(12.0, 20.0, eyeDistance));
     }
 #endif
@@ -147,9 +149,25 @@ vec3 aetherisShadeSurface(vec3 albedo, vec3 normal, vec3 playerPos, vec2 lightma
     if (material == AETHERIS_MAT_FOLIAGE) {
         // No extra albedo multiply here: the transmission term already carries the
         // foliage colour, and multiplying by it again double-darkens every leaf.
+        vec3 viewDir = normalize(-playerPos);
         colour += aetherisLeafTransmission(albedo, viewDir, lightDir, lightColour,
                                            shadow, skyLight, sky.ambientSky) * ao;
     }
+
+#if MATERIAL_GLOSS == 1
+    if (material == AETHERIS_MAT_GLOSS && NdotL > 0.0 && skyLight > 0.003) {
+        // Blinn-Phong exponent 32 using multiplies instead of a per-fragment pow().
+        vec3 viewDir = normalize(-playerPos);
+        vec3 halfVector = normalize(lightDir + viewDir);
+        float nh = saturate(dot(normal, halfVector));
+        float nh2 = nh * nh;
+        float nh4 = nh2 * nh2;
+        float nh8 = nh4 * nh4;
+        float nh16 = nh8 * nh8;
+        float specular = nh16 * nh16;
+        colour += lightColour * (specular * MATERIAL_GLOSS_STRENGTH * skyLight * shadow);
+    }
+#endif
 
     // Emissive blocks are handled through block light already, but lava, sea
     // lanterns and glowstone read flat without a little of their own colour added

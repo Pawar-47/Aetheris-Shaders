@@ -23,6 +23,7 @@ const float AETHERIS_ID_LEAVES = 10000.0;
 const float AETHERIS_ID_PLANT  = 10100.0;
 const float AETHERIS_ID_WATER  = 10200.0;
 const float AETHERIS_ID_EMISSIVE = 10300.0;
+const float AETHERIS_ID_GLOSS = 10400.0;
 
 bool aetherisIsId(float id, float wanted) {
     return abs(id - wanted) < 0.5;

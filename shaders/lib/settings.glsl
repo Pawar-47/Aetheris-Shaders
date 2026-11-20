@@ -22,10 +22,12 @@
  * Everything is a compile time option, or a constant that describes the machine this
  * pack is tuned for: an Intel Core i3-5005U with Intel HD Graphics 5500.
  *
- * The HD 5500 is a 24 EU Broadwell part sharing a 25.6 GB/s memory bus with the CPU.
- * The budget decisions that follow from that are documented in docs/PERFORMANCE.md:
- * one shadow map, one geometry pass, two fullscreen passes, no bloom chain, and every
- * expensive loop bounded by a constant the user can turn down.
+ * Intel's 5th-generation graphics guide lists 24 EUs (23 on some Core i3 SKUs) and
+ * only three texture samplers for HD 5500. The platform shares system RAM with the CPU;
+ * 25.6 GB/s is the dual-channel maximum, not a guarantee for every 8 GB configuration.
+ * The budget decisions are documented in docs/PERFORMANCE.md: keep one shadow map and
+ * forward geometry, bound every ray/sample loop, and run bloom/light shafts in quarter-
+ * resolution composite buffers. No effect is removed by the Performance profile.
  */
 
 /* --------------------------------------------------------------------------
@@ -36,30 +38,32 @@
 #define SHADOWS 1 // [0 1]
 
 // The soft shadow kernel. 4 is hard and cheap, 9 is soft and costs 9 taps.
-#define SHADOW_SAMPLES 6 // [4 6 9]
+#define SHADOW_SAMPLES 4 // [4 6 9]
 
-const int shadowMapResolution = 2048; // [1024 1536 2048 3072]
+const int shadowMapResolution = 1024; // [512 1024 2048]
 
-const float shadowDistance = 96.0; // [64.0 80.0 96.0 128.0]
+const float shadowDistance = 64.0; // [48.0 64.0 80.0 96.0 128.0]
+
+const float shadowDistanceRenderMul = 1.0; // [0.5 0.75 1.0]
 
 // Screen space ambient occlusion. Runs once per screen pixel in composite.
 #define SSAO 1 // [0 1]
 
-#define SSAO_SAMPLES 6 // [4 6 9]
+#define SSAO_SAMPLES 4 // [4 6 9]
 
 // Screen space reflections for the water surface.
 #define WATER_REFLECTIONS 1 // [0 1]
 
 // March steps for the reflection ray. This is the single most expensive loop in
 // the pack and it only runs on water pixels.
-#define REFLECTION_STEPS 8 // [6 8 10]
+#define REFLECTION_STEPS 5 // [4 5 6 8 10]
 
 // Procedural clouds. 0 removes the whole cloud march.
 #define CLOUDS 1 // [0 1]
 
 // Steps through the cloud slab. 5 is soft and cheap, 12 is the most this GPU
 // should ever see.
-#define CLOUD_STEPS 8 // [5 8 12]
+#define CLOUD_STEPS 5 // [4 5 8 12]
 
 // Rag cloud edges with a second noise octave.
 #define CLOUD_DETAIL 1 // [0 1]
@@ -75,6 +79,16 @@ const float shadowDistance = 96.0; // [64.0 80.0 96.0 128.0]
 
 // FXAA in final. Cheap, and this GPU needs it at 720p and below.
 #define ANTI_ALIASING 1 // [0 1]
+
+// Bloom and screen-space volumetric shafts share two quarter-resolution passes.
+#define BLOOM 1 // [0 1]
+#define BLOOM_STRENGTH 0.10 // [0.05 0.10 0.15 0.25]
+#define BLOOM_THRESHOLD 1.2 // [0.8 1.0 1.2 1.5 2.0]
+#define VOLUMETRIC_LIGHT 1 // [0 1]
+#define VOLUMETRIC_STEPS 4 // [4 6 8]
+#define VOLUMETRIC_STRENGTH 0.08 // [0.04 0.08 0.12 0.18]
+#define MATERIAL_GLOSS 1 // [0 1]
+#define MATERIAL_GLOSS_STRENGTH 0.25 // [0.10 0.25 0.40 0.60]
 
 /* --------------------------------------------------------------------------
  * Scene sliders
@@ -141,7 +155,7 @@ const float shadowDistance = 96.0; // [64.0 80.0 96.0 128.0]
 #define UNDERWATER_TINT 1.0 // [0.0 1.0 2.0]
 
 // The penumbra width. 0.8 is the Performance preset, 1.25 the Visual one.
-#define SHADOW_SOFTNESS 1.0 // [0.5 0.8 1.0 1.25 2.5]
+#define SHADOW_SOFTNESS 0.8 // [0.5 0.8 1.0 1.25 2.5]
 
 /* --------------------------------------------------------------------------
  * Colour grading

@@ -38,7 +38,7 @@ jobs:
           # two files that must agree. Nothing enforces that at runtime, so it is
           # enforced here.
           set -e
-          for id in 10000 10100 10200 10300; do
+          for id in 10000 10100 10200 10300 10400; do
             if ! grep -q "^block\.${id}=" shaders/block.properties; then
               echo "block.properties is missing id ${id}" >&2
               exit 1

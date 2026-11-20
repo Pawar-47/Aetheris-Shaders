@@ -30,14 +30,10 @@ const float SSAO_RADIUS = 0.62;
 /* Six points on a spiral, rotated per pixel by the Bayer pattern so the fixed
  * pattern does not show as banding in a smooth crease. */
 const vec2 SSAO_TAPS[9] = vec2[9](
-    vec2(-0.6134,  0.7898),
-    vec2( 0.9239,  0.3827),
-    vec2(-0.2452, -0.9705),
-    vec2( 0.3827, -0.9239),
-    vec2(-0.9658,  0.1147),
-    vec2( 0.7211,  0.6739),
-    vec2(-0.0712,  0.4619),
-    vec2( 0.2957,  0.1311),
+    vec2(-0.7071, -0.7071), vec2(0.7071, -0.7071),
+    vec2(-0.7071, 0.7071), vec2(0.7071, 0.7071),
+    vec2(-0.9658, 0.1147), vec2(0.7211, 0.6739),
+    vec2(-0.0712, 0.4619), vec2(0.2957, 0.1311),
     vec2(-0.4091, -0.3551)
 );
 
@@ -55,22 +51,16 @@ float aetherisSSAO(vec2 uv, float depth) {
     if (fade <= 0.001) return 1.0;
 
     vec3 centre = screenToView(uv, depth);
-    vec2 texel = vec2(1.0 / viewWidth, 1.0 / viewHeight);
 
-    // Surface normal from the depth buffer's own derivatives. Four taps, and a normal is
-    // what separates a crease from a silhouette.
-    //
-    // depthtex0 rather than depthtex1: this is shading the surface that is actually
-    // visible, and behind a pane of glass that surface is the glass, not the wall two
-    // blocks further on. For opaque pixels the two buffers hold the same value, so this
-    // only changes the translucent case, where it is the difference between ambient
-    // occlusion sitting on the object and floating behind it.
-    vec3 left  = screenToView(uv - vec2(texel.x, 0.0), texture(depthtex0, uv - vec2(texel.x, 0.0)).r);
-    vec3 right = screenToView(uv + vec2(texel.x, 0.0), texture(depthtex0, uv + vec2(texel.x, 0.0)).r);
-    vec3 down  = screenToView(uv - vec2(0.0, texel.y), texture(depthtex0, uv - vec2(0.0, texel.y)).r);
-    vec3 up    = screenToView(uv + vec2(0.0, texel.y), texture(depthtex0, uv + vec2(0.0, texel.y)).r);
+    // Reconstruct the view-space normal from derivatives of the already reconstructed
+    // centre position. This removes four neighbouring depth reads from every AO pixel.
+    // The derivative footprint guard avoids unstable normals across hard silhouettes.
+    vec3 dx = dFdx(centre);
+    vec3 dy = dFdy(centre);
+    float footprint = max(length(dx), length(dy));
+    if (footprint > SSAO_RADIUS * 5.0) return 1.0;
 
-    vec3 normal = cross(right - left, up - down);
+    vec3 normal = cross(dx, dy);
     float normalLength = length(normal);
     if (normalLength < 1.0e-9) return 1.0;
     normal /= normalLength;
@@ -91,23 +81,28 @@ float aetherisSSAO(vec2 uv, float depth) {
     vec3 tangent = normalize(cross(reference, normal));
     vec3 bitangent = cross(normal, tangent);
 
+#if SSAO_SAMPLES == 4
+    const int taps = 4;
+#else
     float angle = 6.28318531 * fract(aetherisHash(gl_FragCoord.xy) + 0.42);
     float cosine = cos(angle);
     float sine = sin(angle);
-
-#if SSAO_SAMPLES == 4
-    const int taps = 4;
-#elif SSAO_SAMPLES == 9
+#if SSAO_SAMPLES == 9
     const int taps = 9;
 #else
     const int taps = 6;
+#endif
 #endif
 
     float occlusion = 0.0;
     float accepted = 0.0;
 
     for (int i = 0; i < taps; i++) {
+#if SSAO_SAMPLES == 4
+        vec2 offset = SSAO_TAPS[i];
+#else
         vec2 offset = rotate2(SSAO_TAPS[i], cosine, sine);
+#endif
 
         // A hemisphere sample: offset in the tangent plane, lifted along the normal
         // so the sample point sits above the surface rather than inside it.
