@@ -109,24 +109,10 @@ vec3 valueNoiseGradient(vec2 p) {
     );
 }
 
-/* Two octaves. The second is offset and rotated so the lattice never lines up. */
+/* Two octaves. The second is offset so the lattice never lines up. Used by the
+ * cirrus veil, which is the one place a second octave actually reads. */
 float fbm2(vec2 p) {
     return valueNoise(p) * 0.66 + valueNoise(p * 2.07 + vec2(17.3, 9.1)) * 0.34;
-}
-
-/* Three octaves, used where the extra octave actually reads: cloud edges. */
-float fbm3(vec2 p) {
-    float sum = valueNoise(p) * 0.55;
-    sum += valueNoise(p * 2.03 + vec2(11.7, 3.4)) * 0.30;
-    sum += valueNoise(p * 4.11 + vec2(5.9, 21.2)) * 0.15;
-    return sum;
-}
-
-/* Inverted, ridged noise. Gives cloud crowns and water crests their thin bright
- * detail instead of the rounded blobs plain value noise produces. */
-float ridgedNoise(vec2 p) {
-    float n = valueNoise(p);
-    return 1.0 - abs(n * 2.0 - 1.0);
 }
 
 /* 4x4 ordered dither in the range -0.5 to 0.5.

@@ -71,11 +71,6 @@ vec3 sunTransmittance(float sunElevation) {
     return exp(-tau);
 }
 
-/* Rayleigh phase: symmetric, equal forward and backward lobes. */
-float phaseRayleigh(float cosTheta) {
-    return 0.0596831 * (1.0 + cosTheta * cosTheta);
-}
-
 /* Mie phase, Henyey-Greenstein, normalised so the forward peak (cosTheta = 1) is
  * exactly 1.0. Bounded, so it is safe to multiply by any radiance.
  *

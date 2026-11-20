@@ -38,14 +38,14 @@ vec3 aetherisUnderwaterTint(AetherisSky sky, vec3 direction) {
 }
 
 vec3 aetherisApplyFog(vec3 colour, vec3 playerPos, AetherisSky sky) {
-    float distance = length(playerPos);
+    float distanceToCamera = length(playerPos);
 
     // ---------------------------------------------------------------- underwater
     if (isEyeInWater == 1) {
         // Short range, strong absorption, and brighter towards the surface. Water
         // is the one medium where a heavy handed fog is correct: this is how a lake
         // actually looks from inside.
-        float amount = 1.0 - exp(-distance * (0.085 * FOG_DENSITY));
+        float amount = 1.0 - exp(-distanceToCamera * (0.085 * FOG_DENSITY));
         return mix(colour, aetherisUnderwaterTint(sky, normalize(playerPos)), saturate(amount));
     }
 
@@ -57,7 +57,7 @@ vec3 aetherisApplyFog(vec3 colour, vec3 playerPos, AetherisSky sky) {
     // the overworld, so its luminance is a reliable discriminator.
     float vanillaLuma = luma(fogColor);
     if (vanillaLuma > 0.0015) {
-        float amount = 1.0 - exp(-distance * (0.030 * FOG_DENSITY));
+        float amount = 1.0 - exp(-distanceToCamera * (0.030 * FOG_DENSITY));
         return mix(colour, fogColor * 0.85, saturate(amount) * 0.92);
     }
 
@@ -75,11 +75,11 @@ vec3 aetherisApplyFog(vec3 colour, vec3 playerPos, AetherisSky sky) {
     // Rain thickens the air substantially, which is most of what sells a storm.
     float density = heightTerm * FOG_DENSITY * (1.0 + 1.40 * sky.rain);
 
-    float amount = 1.0 - exp(-distance * density * (1.0 / 320.0));
+    float amount = 1.0 - exp(-distanceToCamera * density * (1.0 / 320.0));
 
     // Hide the edge of the render distance. Ramped over the last fifth so it reads
     // as haze closing in rather than as a wall.
-    amount = max(amount, smoothstep(far * 0.80, far * 0.995, distance) * 0.94);
+    amount = max(amount, smoothstep(far * 0.80, far * 0.995, distanceToCamera) * 0.94);
 
     // ------------------------------------------------------------------- haze tint
     vec3 direction = normalize(playerPos);

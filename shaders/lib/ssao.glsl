@@ -46,12 +46,12 @@ float aetherisSSAO(vec2 uv, float depth) {
 #if SSAO == 0
     return 1.0;
 #else
-    float distance = linearizeDepth(depth);
+    float viewDistance = linearizeDepth(depth);
 
     // Two fades: the far one saves the whole computation beyond 46 blocks, the near
     // one avoids a visible ring where AO stops.
-    if (distance > 46.0) return 1.0;
-    float fade = 1.0 - smoothstep(20.0, 46.0, distance);
+    if (viewDistance > 46.0) return 1.0;
+    float fade = 1.0 - smoothstep(20.0, 46.0, viewDistance);
     if (fade <= 0.001) return 1.0;
 
     vec3 centre = screenToView(uv, depth);

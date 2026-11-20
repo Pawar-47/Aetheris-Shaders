@@ -127,7 +127,7 @@ vec3 aetherisWaterSurface(vec2 uv, vec4 waterData, AetherisSky sky, vec3 sceneCo
     float surfaceDepth = texture(depthtex0, uv).r;
     vec3 viewPos = screenToView(uv, surfaceDepth);
     vec3 worldPos = mat3(gbufferModelViewInverse) * viewPos;
-    float distance = length(viewPos);
+    float viewDistance = length(viewPos);
 
     vec3 toEye = normalize(-worldPos);
     float NdotV = saturate(dot(normal, toEye));
@@ -188,7 +188,7 @@ vec3 aetherisWaterSurface(vec2 uv, vec4 waterData, AetherisSky sky, vec3 sceneCo
 
     // Reflections that ran off screen, or that are too far away for a screen space
     // march to be meaningful, fall back to the sky.
-    float trust = hitWeight * (1.0 - smoothstep(28.0, 96.0, distance));
+    float trust = hitWeight * (1.0 - smoothstep(28.0, 96.0, viewDistance));
     reflection = mix(aetherisReflectionFallback(worldReflect, sky), reflection, trust);
 #else
     reflection = aetherisReflectionFallback(worldReflect, sky);

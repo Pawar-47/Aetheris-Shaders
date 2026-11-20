@@ -1,13 +1,15 @@
 name: Release
 
-# Fires when VERSION changes on main, which is the only thing that should create a
-# release. A release is a statement that the pack in that zip is worth installing,
-# so it is tied to a deliberate edit rather than to every push.
+# Fires when VERSION or CHANGELOG.md changes on main, and only then. A release is a
+# statement that the pack in that zip is worth installing, so it is tied to a
+# deliberate edit rather than to every push. The guard step below makes it
+# idempotent: publishing the same version twice is a no-op.
 on:
   push:
     branches: [main]
     paths:
       - "VERSION"
+      - "CHANGELOG.md"
   workflow_dispatch:
 
 permissions:

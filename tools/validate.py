@@ -93,13 +93,21 @@ def resolve_include(spec, from_file):
     return candidate, read_text(candidate)
 
 
-def expand(path, seen=None):
-    """Recursively inline #include directives, returning one translation unit."""
-    if seen is None:
-        seen = set()
-    if path in seen:
+def expand(path, included=None):
+    """Recursively inline #include directives, returning one translation unit.
+
+    Every file in this pack is wrapped in an #ifndef guard, so including it twice is
+    a no-op in the preprocessor. The expansion here has to model that exactly, with
+    one shared set per translation unit: a per-branch set only prevents cycles and
+    would happily inline settings.glsl once per sibling that includes util.glsl,
+    which then looks like hundreds of duplicate declarations that the compiler would
+    never have seen.
+    """
+    if included is None:
+        included = set()
+    if path in included:
         return ""
-    seen = seen | {path}
+    included.add(path)
 
     text = read_text(path)
     lines_out = []
@@ -108,11 +116,11 @@ def expand(path, seen=None):
         if not match:
             lines_out.append(line)
             continue
-        included_path, included_text = resolve_include(match.group(1), path)
+        included_path, _ = resolve_include(match.group(1), path)
         if included_path is None:
             lines_out.append("\n")
             continue
-        lines_out.append(expand(included_path, seen))
+        lines_out.append(expand(included_path, included))
         if not lines_out[-1].endswith("\n"):
             lines_out.append("\n")
     return "".join(lines_out)

@@ -50,11 +50,4 @@ vec3 viewRayDirection(vec2 uv) {
     return normalize((gbufferProjectionInverse * vec4(uv * 2.0 - 1.0, 0.0, 1.0)).xyz);
 }
 
-/* Distance in blocks along the view ray for a screen pixel, from the opaque
- * depth buffer. Used by the ambient occlusion and the water absorption, both of
- * which care about the solid world rather than the water surface. */
-float opaqueDistance(vec2 uv) {
-    return linearizeDepth(texture(depthtex1, uv).r);
-}
-
 #endif

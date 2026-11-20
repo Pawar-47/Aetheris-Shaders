@@ -49,11 +49,11 @@ vec3 aetherisStars(vec3 dir, AetherisSky sky) {
 
         vec2 local = fract(scaled);
         vec2 centre = vec2(aetherisHash(cell + 1.7), aetherisHash(cell + 4.3));
-        float distance = length(local - centre);
+        float starDistance = length(local - centre);
 
         // Sharper and larger on the bright layer.
         float radius = layer == 0 ? 0.16 : 0.26;
-        float core = smoothstep(radius, 0.0, distance);
+        float core = smoothstep(radius, 0.0, starDistance);
         core *= core;
 
         float brightness = (pick - threshold) / (1.0 - threshold);
