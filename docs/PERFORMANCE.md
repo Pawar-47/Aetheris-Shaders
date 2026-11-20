@@ -151,8 +151,10 @@ The shader instead uses FXAA in the final pass and spatial dithering where appro
 | Balanced | 2048 / 80 / 6 | 6 | 6 | 8 | 6 |
 | Visual | 2048 / 128 / 9 | 9 | 10 | 12 | 8 |
 
-All three profiles keep the effects listed above enabled. They differ in cost and strength,
-not in whether the features exist.
+All three profiles keep the effects listed above enabled. Performance reduces sample counts
+and shadow-map cost, but keeps bloom, light-shaft and gloss intensity at the Balanced values:
+those strength controls do not reduce texture reads or shader instructions, so lowering them
+would only weaken the image without improving frame time.
 
 ## Benchmark protocol still required
 

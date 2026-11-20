@@ -99,10 +99,11 @@ GPU time for higher quality.
 | **Visual** | 2048 map, 128 blocks, 9 taps | 9 samples | 10 steps | 12 steps, detail and cirrus on | FXAA, bloom, 8-step shafts, gloss |
 
 Bloom and light shafts use two buffers at 25% of the screen width and height (6.25% of
-full-resolution pixels), followed by one final upsample. The Performance profile keeps
-these effects enabled with lower sample counts and strengths. The implementation is
-intended to keep the visual feature set while bounding its cost on the HD 5500; actual FPS
-and image quality still need to be measured in Minecraft.
+full-resolution pixels), followed by one final upsample. Performance reduces sample counts,
+shadow resolution and shadow distance, but keeps bloom, shaft and gloss intensity at the
+same values as Balanced: those strength sliders do not reduce shader cost, so lowering them
+would only weaken the image. The feature set stays enabled; actual FPS and image quality
+still need to be measured in Minecraft.
 
 ---
 

@@ -560,6 +560,10 @@ def check_performance_profile():
         "CLOUDS": "1", "CLOUD_DETAIL": "1", "CLOUD_CIRRUS": "1",
         "VEGETATION_WIND": "1", "WATER_WAVES": "1", "ANTI_ALIASING": "1",
         "BLOOM": "1", "VOLUMETRIC_LIGHT": "1", "MATERIAL_GLOSS": "1",
+        # These affect visual intensity, not shader cost; keep them at Balanced values.
+        "SHADOW_SOFTNESS": "1.0", "BLOOM_STRENGTH": "0.15",
+        "BLOOM_THRESHOLD": "1.0", "VOLUMETRIC_STRENGTH": "0.12",
+        "MATERIAL_GLOSS_STRENGTH": "0.40",
     }
     for name, expected in required.items():
         if values.get(name) != expected:
