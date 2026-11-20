@@ -377,6 +377,11 @@ def check_program(name, vsh_path, fsh_path):
     if match:
         raw = match.group(1)
         if "," in raw:
+            if re.search(r'\s', raw):
+                fail("%s: the render target list is %r and contains whitespace; Iris parses "
+                     "each entry with Integer.parseInt, so '0, 2' throws NumberFormatException "
+                     "for input string 2 and the pack will not load. Write it as 0,2"
+                     % (label, raw.strip()))
             targets = len([t for t in raw.split(",") if t.strip()])
         else:
             # Legacy DRAWBUFFERS packs the indices together: "02" is two targets.

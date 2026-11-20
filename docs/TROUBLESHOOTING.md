@@ -52,6 +52,7 @@ Open `<game directory>/logs/latest.log` and search for one of these:
 | `error:` with a GLSL line number | A compile error. The next line names the program and stage. |
 | `TransformationException` or `ParsingException` | Iris could not transform the source. Its message names the construct it stopped on. |
 | `No value present` | An empty `Optional.get()` inside Iris while parsing the pack. Not a GLSL problem — usually a reference in `shaders.properties` to something that is not an option. |
+| `NumberFormatException: For input string: "2"` | A numeric list with a space in it. `RENDERTARGETS` entry parsing uses `Integer.parseInt`, so `0, 2` passes it `" 2"`. Write `0,2`. |
 | `was not recognized as being a name of one of the configurable const options` | An option in `settings.glsl` that Iris does not register. See below. |
 | `Ignoring this #define` | An option line Iris rejected. Causes: a `//` comment before the `#define` on a valued option, no `[...]` allowed-values list, or a value the list does not contain. |
 | `Properties pre-processing failed` | `shaders.properties` or `block.properties` did not survive preprocessing. |

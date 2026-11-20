@@ -6,6 +6,19 @@ All notable changes to Aetheris Shaders are recorded here. The format follows
 
 A release is made when there is something worth installing, not when a number changes.
 
+## [1.5.1] - 2026-11-30
+
+The pack failed with a real exception at last: `java.lang.NumberFormatException: For input
+string: "2"`. That named the bug exactly.
+
+### Fixed
+
+- **A space in a render target list.** `gbuffers_water` declared
+  `/* RENDERTARGETS: 0, 2 */`. Iris parses each entry of that list with `Integer.parseInt`,
+  so the second entry arrives as `" 2"` and the load dies. The documentation writes the
+  directive as `X,Y,Z` for this reason. It is `0,2` now.
+- The validator rejects whitespace inside a target list, so this cannot ship again.
+
 ## [1.5.0] - 2026-11-30
 
 The pack still would not apply, so this release was built by comparing it file by file

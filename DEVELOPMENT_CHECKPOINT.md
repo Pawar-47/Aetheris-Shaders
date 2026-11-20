@@ -36,7 +36,14 @@ detection path that depended entirely on one file being parsed as expected.
 
 ## Current stage
 
-**1.5.0 implemented, statically validated, still awaiting its first run in Minecraft.**
+**1.5.1 implemented, statically validated, still awaiting its first run in Minecraft.**
+
+The failure now has a name: `java.lang.NumberFormatException: For input string: "2"`, which is
+Iris parsing `/* RENDERTARGETS: 0, 2 */`. Each entry of that list goes through
+`Integer.parseInt`, so the second arrives as `" 2"`. Iris' own documentation writes the
+directive as `X,Y,Z`, without spaces, for that reason. Fixed in 1.5.1, and the validator now
+rejects whitespace in a target list.
+
 
 Four releases, three of them chasing a load failure, and the pattern is worth recording: every
 time, the cause was found by reading Iris' own source rather than by reasoning about the pack,
