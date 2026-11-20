@@ -536,26 +536,21 @@ def check_options():
 def check_performance_profile():
     """Keep the low-end preset feature-complete; quality may fall, effects may not vanish."""
     properties = read_text(os.path.join(SHADERS, "shaders.properties"))
-    lines = [line.strip() for line in properties.splitlines()
-             if line.strip() and not line.strip().startswith("#")]
+    entries = {}
+    for raw_line in properties.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        entries[key.strip()] = value.strip()
 
-    def property_value(key):
-        prefix = key + "="
-        for line in lines:
-            if line.startswith(prefix):
-                return line.split("=", 1)[1].strip()
-        return None
-
-    profile_line = next(
-        (line for line in lines if line.startswith("profile.PERFORMANCE=")),
-        None,
-    )
-    if not profile_line:
+    profile_value = entries.get("profile.PERFORMANCE")
+    if profile_value is None:
         fail("shaders.properties: profile.PERFORMANCE is missing")
         return
 
     values = {}
-    for token in profile_line.split("=", 1)[1].split():
+    for token in profile_value.split():
         if "=" in token:
             name, value = token.split("=", 1)
             values[name] = value
@@ -572,16 +567,16 @@ def check_performance_profile():
 
     if values.get("shadowDistanceRenderMul") != "1.0":
         fail("profile.PERFORMANCE: shadowDistanceRenderMul must enable distance culling at the configured shadow distance")
-    if property_value("shadow.culling") != "true":
+    if entries.get("shadow.culling") != "true":
         fail("shaders.properties: shadow.culling must remain enabled")
 
     for buffer in ("colortex3", "colortex4"):
-        if property_value("size.buffer.%s" % buffer) != "0.25 0.25":
+        if entries.get("size.buffer.%s" % buffer) != "0.25 0.25":
             fail("shaders.properties: %s must remain quarter-width/quarter-height" % buffer)
 
     for program in ("composite1", "composite2"):
-        expression = property_value("program.%s.enabled" % program)
-        if not expression or "BLOOM" not in expression or "VOLUMETRIC_LIGHT" not in expression:
+        expression = entries.get("program.%s.enabled" % program, "")
+        if "BLOOM" not in expression or "VOLUMETRIC_LIGHT" not in expression:
             fail("shaders.properties: %s must be conditionally enabled for both retained low-resolution effects"
                  % program)
 
