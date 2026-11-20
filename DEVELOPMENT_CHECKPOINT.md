@@ -1,3 +1,79 @@
+# Current development checkpoint — 2026-11-21
+
+## Active branch and exact state
+
+- Repository: Pawar-47/Aetheris-Shaders
+- Active work branch: perf/full-feature-performance
+- Branch head before documentation alignment: 4a6b686a3a4f5dae2ae0fd4fd8bc5298f2630746
+- Parent implementation commit: 168fbebf0bdef3be294f66779d2ad607fa2b0fcd
+- Version in VERSION: 1.6.1
+- Default branch: main (not changed by this checkpoint)
+- No merge or GitHub Release has been made from this branch.
+
+## Work already present
+
+The branch contains the feature-preserving low-end pipeline:
+- Shadows, AO, water reflections, cloud detail/cirrus, FXAA, bloom, screen-space light
+  shafts, vegetation wind, water waves and material gloss remain enabled in Performance.
+- Shadow sampling and contact darkening share the same depth reads.
+- SSAO uses derivatives to avoid four neighbouring depth reads.
+- Bloom and screen-space light shafts share two low-resolution buffers.
+- The material gloss path uses a curated block ID map and no companion resource pack.
+- The validator checks that Performance does not disable the required effects.
+
+## Documentation completed in this continuation
+
+- README preset table and verification status aligned with the 1.6.1 branch.
+- docs/PERFORMANCE.md rewritten to explain the actual per-effect budgets and limitations.
+- The current checkpoint is being refreshed; historical checkpoint notes remain below it.
+
+## Recorded CI evidence
+
+GitHub Actions run: 44798190121  
+Commit tested: 4a6b686a3a4f5dae2ae0fd4fd8bc5298f2630746
+
+The job log reports:
+- static validation passed;
+- all 46 shader stages compiled and every program linked;
+- block IDs agreed;
+- option-label checks passed;
+- tools/package.sh produced build/Aetheris-Shaders-1.6.1.zip;
+- artifact upload completed successfully (artifact ID 14658418770).
+
+The GitHub Actions API still reports the run as in progress even though its log reaches
+successful artifact upload. Do not call the overall workflow conclusively green until GitHub
+records a terminal status.
+
+## What is not verified
+
+- Iris has not been confirmed loading this branch in Minecraft 1.21.5.
+- No live-world visual review has been performed.
+- No FPS or frame-time benchmark has been taken on the Core i3-5005U / HD 5500.
+- The CI compiler transformation is not a substitute for Iris' own runtime preprocessing
+  and the actual Mesa/OpenGL driver.
+
+## Immediate next actions
+
+1. Verify the latest documentation commit and inspect for stale claims.
+2. Check whether the existing Actions run reached a terminal result; trigger a fresh CI run
+   through a new branch commit only if the current run is still genuinely stuck.
+3. Inspect the generated 1.6.1 artifact and its root layout.
+4. Test that exact artifact in Minecraft 1.21.5 with Iris 1.8.x on the target Linux Mint
+   machine. Enable Iris debug mode before applying it.
+5. If it fails, fix the first concrete error in logs/latest.log or the patched shader source;
+   do not guess at fixes from the empty Iris details pane.
+6. If it loads, capture screenshots and benchmark a repeatable scene before tuning defaults.
+7. Keep the work on this branch. Do not merge to main or publish a release without an
+   explicit instruction.
+
+---
+
+## Historical checkpoint notes
+
+The material below records earlier development history. Some next-task lists and validation
+statements are superseded by the current checkpoint above; retain them as history rather than
+treating them as the active plan.
+
 # Development checkpoint
 
 Aetheris Shaders. This file is the first thing to read when picking the project back up.
