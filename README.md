@@ -9,12 +9,12 @@ integrated GPU, with BSL Shaders as its artistic reference. Where BSL's look com
 particular way of handling light, atmosphere and water, this pack studies that principle
 and re-derives its own version of it at a fraction of the cost.
 
-**Branch build: 1.6.1 (perf/full-feature-performance).** CI logs show static validation,
-GLSL compilation/linking of all 46 stages, option and block-ID checks, and ZIP packaging
-succeeded. The workflow's final state is still reported as in progress, despite the logs
-showing artifact upload completed. This is not an in-game verification: Iris loading,
-visual output and frame rate on the target laptop remain untested. No 1.6.1 GitHub Release
-has been published from this branch. See [verification status](#what-has-and-has-not-been-verified).
+**Branch build: 1.6.1 (perf/full-feature-performance).** GitHub Actions run 44799052684
+completed successfully: static validation, GLSL compilation/linking of all 46 stages,
+option and block-ID checks, ZIP packaging and artifact upload all passed. This is not an
+in-game verification: Iris loading, visual output and frame rate on the target laptop remain
+untested. No 1.6.1 GitHub Release has been published from this branch. See
+[verification status](#what-has-and-has-not-been-verified).
 
 ### Iris, not OptiFine
 
@@ -277,9 +277,8 @@ The evidence below is tied to the perf/full-feature-performance branch at commit
   uncompressed; 64,357 bytes uploaded as the CI artifact).
 - The artifact upload step reported success.
 
-The Actions API still reports that run as in progress even though the job log reaches the
-successful artifact-upload message. I therefore do not label the workflow's final conclusion
-green until GitHub records a terminal result.
+GitHub records run 44799052684 as **completed / success**. The earlier in-progress state was
+stale while the runner was completing its cleanup steps.
 
 **Not verified**
 
