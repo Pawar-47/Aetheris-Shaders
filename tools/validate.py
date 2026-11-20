@@ -536,12 +536,21 @@ def check_options():
 def check_performance_profile():
     """Keep the low-end preset feature-complete; quality may fall, effects may not vanish."""
     properties = read_text(os.path.join(SHADERS, "shaders.properties"))
+    lines = [line.strip() for line in properties.splitlines()
+             if line.strip() and not line.strip().startswith("#")]
+
+    def property_value(key):
+        prefix = key + "="
+        for line in lines:
+            if line.startswith(prefix):
+                return line.split("=", 1)[1].strip()
+        return None
+
     profile_line = next(
-        (line.strip() for line in properties.splitlines()
-         if line.strip().startswith("profile.PERFORMANCE")),
+        (line for line in lines if line.startswith("profile.PERFORMANCE=")),
         None,
     )
-    if not profile_line or "=" not in profile_line:
+    if not profile_line:
         fail("shaders.properties: profile.PERFORMANCE is missing")
         return
 
@@ -554,28 +563,44 @@ def check_performance_profile():
     required = {
         "SHADOWS": "1", "SSAO": "1", "WATER_REFLECTIONS": "1",
         "CLOUDS": "1", "CLOUD_DETAIL": "1", "CLOUD_CIRRUS": "1",
-        "WATER_WAVES": "1", "ANTI_ALIASING": "1", "BLOOM": "1",
-        "VOLUMETRIC_LIGHT": "1", "MATERIAL_GLOSS": "1",
+        "VEGETATION_WIND": "1", "WATER_WAVES": "1", "ANTI_ALIASING": "1",
+        "BLOOM": "1", "VOLUMETRIC_LIGHT": "1", "MATERIAL_GLOSS": "1",
     }
     for name, expected in required.items():
         if values.get(name) != expected:
             fail("profile.PERFORMANCE: %s must remain enabled (expected %s)" % (name, expected))
 
     if values.get("shadowDistanceRenderMul") != "1.0":
-        fail("profile.PERFORMANCE: shadowDistanceRenderMul must enable real shadow-pass culling")
+        fail("profile.PERFORMANCE: shadowDistanceRenderMul must enable distance culling at the configured shadow distance")
+    if property_value("shadow.culling") != "true":
+        fail("shaders.properties: shadow.culling must remain enabled")
 
-    lines = [line.strip() for line in properties.splitlines()]
     for buffer in ("colortex3", "colortex4"):
-        prefix = "size.buffer.%s" % buffer
-        if not any(line.startswith(prefix) and "0.25 0.25" in line for line in lines):
-            fail("shaders.properties: %s must remain a quarter-resolution composite buffer" % buffer)
+        if property_value("size.buffer.%s" % buffer) != "0.25 0.25":
+            fail("shaders.properties: %s must remain quarter-width/quarter-height" % buffer)
 
     for program in ("composite1", "composite2"):
-        prefix = "program.%s.enabled" % program
-        if not any(line.startswith(prefix) and ("BLOOM" in line or "VOLUMETRIC_LIGHT" in line)
-                   for line in lines):
-            fail("shaders.properties: %s must be conditionally enabled for retained low-resolution effects"
+        expression = property_value("program.%s.enabled" % program)
+        if not expression or "BLOOM" not in expression or "VOLUMETRIC_LIGHT" not in expression:
+            fail("shaders.properties: %s must be conditionally enabled for both retained low-resolution effects"
                  % program)
+
+    # Guard the effect-buffer route end to end, not just the option declarations.
+    expected_routes = {
+        "composite1.fsh": "RENDERTARGETS: 3",
+        "composite2.fsh": "RENDERTARGETS: 4",
+    }
+    for filename, directive in expected_routes.items():
+        path = os.path.join(SHADERS, filename)
+        if not os.path.isfile(path) or directive not in read_text(path):
+            fail("shaders/%s must write %s" % (filename, directive))
+
+    final_body = read_text(os.path.join(SHADERS, "lib", "body", "final.fsh"))
+    if "uniform sampler2D colortex4;" not in final_body or "texture(colortex4" not in final_body:
+        fail("lib/body/final.fsh must sample the combined low-resolution effects buffer")
+    composite2_body = read_text(os.path.join(SHADERS, "lib", "body", "composite2.fsh"))
+    if "uniform sampler2D colortex3;" not in composite2_body or "texture(colortex3" not in composite2_body:
+        fail("lib/body/composite2.fsh must blur the first low-resolution effects buffer")
 
 
 def main():
