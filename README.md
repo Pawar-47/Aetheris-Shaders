@@ -46,7 +46,8 @@ against, not a compromise between a laptop and a desktop.
 
 1. Install **Iris 1.8.x** and **Sodium** for Minecraft 1.21.5.
 2. Download `Aetheris-Shaders-<version>.zip` from
-   [Releases](../../releases).
+   [Releases](../../releases) when a release is available. The current 1.6.1 branch build is
+   available as a GitHub Actions artifact, not as a published Release.
 3. Drop it in `.minecraft/shaderpacks/` without unzipping it. On Linux Mint that is
    usually `~/.minecraft/shaderpacks/` or inside the SK Launcher instance folder.
 4. In game: `Options -> Video Settings -> Shader Packs -> Aetheris Shaders`.
@@ -55,11 +56,9 @@ against, not a compromise between a laptop and a desktop.
    in `logs/latest.log` point at a real file and line. See
    [Troubleshooting](docs/TROUBLESHOOTING.md).
 
-If Iris refuses to apply the pack, install `Aetheris-Probe-<version>.zip` from the same
-release first. It is two files and no configuration, and it answers one question: whether
-*any* shader pack loads on your setup at all. If the probe loads and Aetheris does not, the
-fault is here and `logs/latest.log` will name it; if the probe also fails, the problem is the
-Iris install, the Minecraft version, or where the zip was placed.
+If Iris refuses to apply the pack, enable Iris debug mode with Ctrl+D on the shader
+selection screen, then inspect `logs/latest.log` and the generated `patched_shaders/`
+files. The on-screen details pane can be empty even when the log contains the real cause.
 
 No resource pack is required and none is provided. Every effect in this pack is
 achieved in shader code over vanilla assets.
