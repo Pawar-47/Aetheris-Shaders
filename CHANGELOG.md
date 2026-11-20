@@ -17,7 +17,9 @@ string: "2"`. That named the bug exactly.
   `/* RENDERTARGETS: 0, 2 */`. Iris parses each entry of that list with `Integer.parseInt`,
   so the second entry arrives as `" 2"` and the load dies. The documentation writes the
   directive as `X,Y,Z` for this reason. It is `0,2` now.
-- The validator rejects whitespace inside a target list, so this cannot ship again.
+- The validator rejects whitespace inside a target list, so this cannot ship again. Its first
+  version fired on its own pattern: `\s*` swallowed the space before `*/`, so a correct `0,2`
+  was captured as `"0,2 "` and reported. It trims first now.
 
 ## [1.5.0] - 2026-11-30
 
