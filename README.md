@@ -9,11 +9,12 @@ integrated GPU, with BSL Shaders as its artistic reference. Where BSL's look com
 particular way of handling light, atmosphere and water, this pack studies that principle
 and re-derives its own version of it at a fraction of the cost.
 
-**Status: 1.5.0. Statically validated, not yet run in a game.** See
-[What has and has not been verified](#what-has-and-has-not-been-verified) before you
-expect anything from it. If Iris refuses to apply the pack and shows an empty error, see
-[Troubleshooting](docs/TROUBLESHOOTING.md) — that page names the log lines that actually
-explain a failed load.
+**Branch build: 1.6.1 (perf/full-feature-performance).** CI logs show static validation,
+GLSL compilation/linking of all 46 stages, option and block-ID checks, and ZIP packaging
+succeeded. The workflow's final state is still reported as in progress, despite the logs
+showing artifact upload completed. This is not an in-game verification: Iris loading,
+visual output and frame rate on the target laptop remain untested. No 1.6.1 GitHub Release
+has been published from this branch. See [verification status](#what-has-and-has-not-been-verified).
 
 ### Iris, not OptiFine
 
@@ -79,21 +80,23 @@ These are outside the pack and are the difference between playable and not on th
 
 ## Presets
 
-Three real presets, each a genuinely different rendering cost and not a relabelling. They
-are in `shaders.properties` as `profile.*` lines; `Performance` also flips
-`shadow.enabled` through an `#if SHADOWS` conditional, so it removes the shadow render pass
-rather than leaving it running unsampled.
+The low-end preset is deliberately **feature-preserving**. Performance mode reduces the
+cost of each effect; it does not remove shadows, AO, water reflections, clouds, antialiasing,
+bloom, light shafts or material gloss. “Recommended for HD 5500” is the default profile and
+uses the same settings as “Performance”; “Balanced” and “Visual” spend progressively more
+GPU time for higher quality.
 
-| Preset | Shadows | AO | Water reflections | Clouds | FXAA |
+| Preset | Shadows | AO | Water reflections | Clouds | Post effects |
 |---|---|---|---|---|---|
-| **Performance** | pass disabled entirely | off | off | 5 steps, no detail octave, no cirrus | off |
-| **Balanced** (default) | 2048, 6 taps, 96 blocks | 6 samples | 8 steps | 8 steps, detail, cirrus | on |
-| **Visual** | 2048, 9 taps, 128 blocks | 9 samples | 10 steps | 12 steps, detail, cirrus | on |
+| **Recommended / Performance** | 1024 map, 64 blocks, 4 taps | 4 samples | 5 steps | 5 steps, detail and cirrus on | FXAA, bloom, 4-step screen-space shafts, gloss |
+| **Balanced** | 2048 map, 80 blocks, 6 taps | 6 samples | 6 steps | 8 steps, detail and cirrus on | FXAA, bloom, 6-step shafts, gloss |
+| **Visual** | 2048 map, 128 blocks, 9 taps | 9 samples | 10 steps | 12 steps, detail and cirrus on | FXAA, bloom, 8-step shafts, gloss |
 
-Performance removes whole passes rather than shaving quality everywhere: no shadow render
-pass, no ambient occlusion, no reflection march, no antialiasing pass. The pack still looks
-like Aetheris, because the things that define its look — the atmosphere model, the sky, the
-water body colour, the wave normals, the sun disc, the tone curve — are all still there.
+Bloom and light shafts use two buffers at 25% of the screen width and height (6.25% of
+full-resolution pixels), followed by one final upsample. The Performance profile keeps
+these effects enabled with lower sample counts and strengths. The implementation is
+intended to keep the visual feature set while bounding its cost on the HD 5500; actual FPS
+and image quality still need to be measured in Minecraft.
 
 ---
 
@@ -226,8 +229,9 @@ the cost, and on Minecraft terrain it is small.
 Wrapped diffuse so a block's terminator is not a hard painted line. Hemisphere ambient
 that gives every shape a top-lit gradient. Block light only partly occluded by vertex AO,
 so a torch can still reach into a corner. A deep blue night floor, because a neutral one
-is what makes cheap night scenes look like a dimmed day. Soft shadows from one 2048 map
-with a per-pixel rotated nine-tap spiral.
+is what makes cheap night scenes look like a dimmed day. The Performance profile uses one 1024 shadow map with four taps; higher profiles increase
+map resolution, distance and taps. The directional shadow and near-field contact term
+reuse the same depth reads.
 
 Two things about that pass are worth naming, because both were wrong at some point and
 neither is visible from inside the shading code:
@@ -249,49 +253,36 @@ accept, and it is not worth a few percent of bandwidth against a failure to load
 
 ## What has and has not been verified
 
-This is important, and it is stated plainly rather than buried.
+The evidence below is tied to the perf/full-feature-performance branch at commit
+4a6b686a3a4f5dae2ae0fd4fd8bc5298f2630746.
 
-**Verified in CI** — this passes on `main`. It has already earned its keep three times: a
-missing include in the composite path, two vertex stages carrying no option constants, and
-a duplicate `colortex0` that would have sent the whole pack back to vanilla rendering.
+**Completed steps in the recorded GitHub Actions job**
 
-- Every `#include` resolves to a file that exists.
-- Braces and `#if`/`#endif` balance in every translation unit.
-- Every function called is defined in the same unit or is a GLSL built-in — this is what
-  catches a misspelled or missing library function.
-- Every sampler is one Iris actually binds.
-- Every varying a fragment stage reads is written by its vertex stage with the same type.
-  These are link errors that no per-file check can see.
-- `DRAWBUFFERS` lists exactly as many targets as the fragment stage declares outputs.
-- `shadowMapResolution` and `shadowDistance` are declared exactly once per unit.
-- Every option named in `shaders.properties` exists in `settings.glsl`, and every option
-  has a label.
-- `block.properties` IDs agree with the constants in `vegetation.glsl`.
-- No global name is declared twice in one translation unit. This check exists because a
-  duplicate `colortex0` in the composite pass is what took 1.0.0 down to vanilla rendering:
-  Mesa rejects the redefinition, and one rejected program is all it takes for Iris to drop
-  the pack.
-- A stage that uses the compatibility built-ins declares the compatibility profile, because
-  that is the condition under which Iris patches them, and `mc_Entity` is a `vec2` as Iris
-  documents it. Both are Iris rules rather than GLSL rules.
-- The pack zips into the correct layout.
+- Static validation completed successfully.
+- The GLSL check reported: **“All 46 stages compile, and every program links.”**
+- The block ID map and material constants agreed, including the new gloss material ID.
+- Every settings option had a language label.
+- The packaging script produced Aetheris-Shaders-1.6.1.zip with 85 files (146,284 bytes
+  uncompressed; 64,357 bytes uploaded as the CI artifact).
+- The artifact upload step reported success.
+
+The Actions API still reports that run as in progress even though the job log reaches the
+successful artifact-upload message. I therefore do not label the workflow's final conclusion
+green until GitHub records a terminal result.
 
 **Not verified**
 
-- GPU compilation. No GLSL compiler was run against this pack. `glslangValidator` is not
-  usable here at all: gbuffer programs depend on the OpenGL compatibility profile, and
-  `gl_ModelViewMatrix`, `gl_Vertex`, `gl_Color` and `gl_MultiTexCoord1` have no core GLSL
-  equivalent, so a generic validator rejects the entire pack for reasons that say nothing
-  about whether it works in Iris.
-- Runtime behaviour in Minecraft, on this GPU or any other.
-- Frame rate. The budget reasoning in `docs/PERFORMANCE.md` is arithmetic, not a
-  measurement.
-- Visual quality. Every colour and every constant was chosen by design and by reference to
-  what these techniques look like in other packs. None of it has been looked at on screen.
+- The pack has not been confirmed loading in Iris on Minecraft 1.21.5.
+- The shader output has not been visually inspected in a live world.
+- No FPS, frame-time, GPU temperature or memory measurements have been taken on the
+  Core i3-5005U / HD 5500.
+- CI's GLSL transformation is a useful compatibility check, but it is not a substitute for
+  Iris' own shader preprocessing and a real OpenGL driver.
 
-The first person to load this pack is the first person to see it. Expect to need to tune
-it. `DEVELOPMENT_CHECKPOINT.md` lists exactly which numbers are most likely to need it and
-in which direction.
+Do not treat the 1.6.1 artifact as a tested release. The next meaningful test is to install
+that exact artifact in the SK Launcher instance, enable Iris debug mode, and capture
+logs/latest.log plus the rendered result. If the pack loads, benchmark the same scene at a
+fixed resolution and render distance before changing the defaults.
 
 ---
 
@@ -320,6 +311,7 @@ shaders/
     post.glsl            FXAA, tonemap, grade
     depth.glsl           depth and screen space conversions
     body/                one body per pass family, included by the wrappers
+  composite1/2          low-resolution bloom and screen-space light-shaft stages
 tools/
   validate.py            static validation, run in CI
   package.sh             builds the installable zip
