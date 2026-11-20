@@ -188,9 +188,12 @@ vec3 aetherisSkyGradient(vec3 dir, AetherisSky sky) {
  * and stops the below horizon darkening from making the fog darker than the sky it
  * meets. */
 vec3 aetherisHazeColour(vec3 dir, AetherisSky sky) {
-    vec3 flat = vec3(dir.x, 0.022, dir.z);
-    if (dot(flat, flat) < 1.0e-8) flat = vec3(0.0, 1.0, 0.0);
-    return aetherisSkyGradient(normalize(flat), sky);
+    // Not named "flat": flat is a reserved interpolation qualifier in GLSL 3.30, so a local
+    // of that name is a syntax error, and the ANTLR parser Iris uses rejects the whole
+    // translation unit with "no viable alternative at input 'vec3 flat'".
+    vec3 flattened = vec3(dir.x, 0.022, dir.z);
+    if (dot(flattened, flattened) < 1.0e-8) flattened = vec3(0.0, 1.0, 0.0);
+    return aetherisSkyGradient(normalize(flattened), sky);
 }
 
 /* Build the frame state. One call per program, in a body file, before anything

@@ -22,6 +22,16 @@ jobs:
       - name: Static validation
         run: python3 tools/validate.py
 
+      - name: Install glslang
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq glslang-tools
+
+      # The check that should have existed from the start. Iris rewrites the compatibility
+      # profile into core and substitutes the legacy built-ins; this does the same, then
+      # hands the result to a real compiler, so syntax and type errors are caught here
+      # instead of by the first person who loads the pack.
+      - name: GLSL compile check
+        run: python3 tools/glsl_check.py
+
       - name: Check that block properties agree with the shader constants
         run: |
           # The ID map in block.properties and the constants in vegetation.glsl are
