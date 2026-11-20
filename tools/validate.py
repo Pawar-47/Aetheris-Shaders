@@ -163,7 +163,7 @@ precision highp mediump lowp attribute varying main defined
 # be bound and would compile to something undefined.
 IRIS_SAMPLERS = set("""
 gtexture lightmap normals specular gaux1 gaux2 gaux3 gaux4 noisetex
-depthtex0 depthtex1 depthtex2 shadowtex0 shadowtex1 shadowcolor0 shadowcolor1
+depthtex0 depthtex1 depthtex2 shadowtex0 shadowtex1 shadowtex0HW shadowcolor0 shadowcolor1
 gdepth gnormal gcolor gtexture1 gtexture2
 """.split())
 IRIS_SAMPLERS.update("colortex%d" % i for i in range(16))
@@ -556,7 +556,7 @@ def check_performance_profile():
             values[name] = value
 
     required = {
-        "SHADOWS": "1", "SSAO": "1", "WATER_REFLECTIONS": "1",
+        "SHADOWS": "1", "SHADOW_SAMPLES": "4", "SSAO": "1", "WATER_REFLECTIONS": "1",
         "CLOUDS": "1", "CLOUD_DETAIL": "1", "CLOUD_CIRRUS": "1",
         "VEGETATION_WIND": "1", "WATER_WAVES": "1", "ANTI_ALIASING": "1",
         "BLOOM": "1", "VOLUMETRIC_LIGHT": "1", "MATERIAL_GLOSS": "1",
@@ -573,6 +573,16 @@ def check_performance_profile():
         fail("profile.PERFORMANCE: shadowDistanceRenderMul must enable distance culling at the configured shadow distance")
     if entries.get("shadow.culling") != "true":
         fail("shaders.properties: shadow.culling must remain enabled")
+    if "SEPARATE_HARDWARE_SAMPLERS" not in entries.get("iris.features.required", "").split():
+        fail("shaders.properties: SEPARATE_HARDWARE_SAMPLERS is required for hardware PCF")
+    settings_source = read_text(os.path.join(SHADERS, "lib", "settings.glsl"))
+    shadow_source = read_text(os.path.join(SHADERS, "lib", "shadow.glsl"))
+    if "const bool shadowHardwareFiltering = true;" not in settings_source:
+        fail("settings.glsl: hardware shadow filtering must be enabled")
+    if "uniform sampler2DShadow shadowtex0HW;" not in shadow_source:
+        fail("shadow.glsl: separate hardware comparison sampler is missing")
+    if "texture(shadowtex0HW, vec3(uv, receiverDepth - depthBias))" not in shadow_source:
+        fail("shadow.glsl: Performance must use hardware 2x2 PCF")
 
     for buffer in ("colortex3", "colortex4"):
         if entries.get("size.buffer.%s" % buffer) != "0.25 0.25":

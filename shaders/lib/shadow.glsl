@@ -5,13 +5,13 @@
 
 /* Shadow mapping.
  *
- * One depth map, no cascades. Performance uses a fixed symmetric four-tap kernel
- * and Iris culls geometry outside the useful shadow frustum/radius. Balanced and
- * Visual use the six- and nine-tap rotated spiral kernels.
+ * One depth map, no cascades. Performance uses Iris' hardware 2x2 comparison filter
+ * for directional shadows and one raw depth read for contact darkening. Balanced and
+ * Visual retain the six- and nine-tap rotated software kernels.
  *
- * The low-cost kernel avoids per-pixel hash and trigonometric work. The same depth
- * reads also supply near-field contact darkening, so contact shadows do not launch
- * a second sampling loop.
+ * The low-cost path moves the four depth comparisons into the texture sampler and
+ * avoids per-pixel hash/trigonometric work. Iris culls geometry outside the useful
+ * shadow frustum/radius.
  *
  * shadowtex0 carries the alpha tested foliage as well as solid geometry, so tree
  * shadows have the shape of the leaves. shadowtex1 is opaque only and is not used:
@@ -19,9 +19,10 @@
  */
 
 uniform sampler2D shadowtex0;
+uniform sampler2DShadow shadowtex0HW;
 
-/* The first four taps form a symmetric 2x2 kernel for the low-cost profile.
- * Higher sample counts use the remaining spiral points with per-pixel rotation. */
+/* The 6/9-tap software kernels use a spiral with per-pixel rotation. Performance
+ * uses the hardware comparison sampler's 2x2 filter instead. */
 const vec2 SHADOW_TAPS[9] = vec2[9](
     vec2(-0.5, -0.5), vec2(0.5, -0.5),
     vec2(-0.5, 0.5), vec2(0.5, 0.5),
@@ -69,8 +70,19 @@ float sampleShadow(vec3 playerPos, vec3 normal, float NdotL,
     float radius = SHADOW_SOFTNESS * mix(0.85, 3.40, distance01) * (0.75 + 0.85 * slope);
     float texel = radius / float(shadowMapResolution);
 
+    float lit = 0.0;
+    float contactOccluded = 0.0;
+    float contactBias = 0.0006 + 0.0012 * slope;
+    const float contactRange = 0.012;
+
 #if SHADOW_SAMPLES == 4
-    const int taps = 4;
+    // Hardware PCF averages the 2x2 comparison footprint in one sampler operation.
+    lit = texture(shadowtex0HW, vec3(uv, receiverDepth - depthBias));
+    float storedDepth = texture(shadowtex0, uv).r;
+    float contactDelta = receiverDepth - storedDepth;
+    if (contactDelta > contactBias && contactDelta < contactRange) {
+        contactOccluded = 1.0 - contactDelta / contactRange;
+    }
 #else
 #if SHADOW_SAMPLES == 9
     const int taps = 9;
@@ -80,29 +92,22 @@ float sampleShadow(vec3 playerPos, vec3 normal, float NdotL,
     float angle = 6.28318531 * fract(aetherisHash(gl_FragCoord.xy) + 0.5);
     float c = cos(angle);
     float s = sin(angle);
-#endif
 
-    float lit = 0.0;
-    float contactOccluded = 0.0;
-    float contactBias = 0.0006 + 0.0012 * slope;
-    const float contactRange = 0.012;
-
-    for (int i = 0; i < taps; i++) {
-#if SHADOW_SAMPLES == 4
-        vec2 offset = SHADOW_TAPS[i] * texel;
-#else
+    float shadowDepthSum = 0.0;
+    for (int i = 0; i < taps; ++i) {
         vec2 offset = rotate2(SHADOW_TAPS[i], c, s) * texel;
-#endif
-        float storedDepth = texture(shadowtex0, uv + offset).r;
-        lit += smoothstep(receiverDepth - depthBias, receiverDepth - depthBias + band, storedDepth);
-        float contactDelta = receiverDepth - storedDepth;
+        float sampleDepth = texture(shadowtex0, uv + offset).r;
+        lit += smoothstep(receiverDepth - depthBias, receiverDepth - depthBias + band, sampleDepth);
+        float contactDelta = receiverDepth - sampleDepth;
         if (contactDelta > contactBias && contactDelta < contactRange) {
             contactOccluded += 1.0 - contactDelta / contactRange;
         }
+        shadowDepthSum += sampleDepth;
     }
-
     lit /= float(taps);
     contactOccluded /= float(taps);
+#endif
+
     contact = mix(1.0, 1.0 - 0.35 * contactOccluded, (1.0 - distance01) * 0.85);
 
     float edge = min(min(uv.x, uv.y), min(1.0 - uv.x, 1.0 - uv.y));

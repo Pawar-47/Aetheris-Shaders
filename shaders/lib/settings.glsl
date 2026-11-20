@@ -7,7 +7,7 @@
  * comments. Iris-native constant options are the explicit exception.
  *
  * Iris only recognises a fixed list of `const` option names: shadowMapResolution,
- * shadowDistance, shadowDistanceRenderMul, sunPathRotation, ambientOcclusionLevel,
+ * shadowDistance, shadowDistanceRenderMul, shadowHardwareFiltering, sunPathRotation, ambientOcclusionLevel,
  * superSamplingLevel, noiseTextureResolution and a set of shadow map flags. A `const float SUN_STRENGTH`
  * is not an option at all, whatever comment follows it, and Iris says so only in a
  * diagnostic that never reaches the user. This file declared every slider that way.
@@ -38,7 +38,7 @@
 // Shadows: 0 disables the shadow render pass entirely, not just the lookups.
 #define SHADOWS 1 // [0 1]
 
-// Performance uses a fixed symmetric four-tap kernel; 6/9 taps add softer penumbrae.
+// Performance uses hardware 2x2 PCF; 6/9 use the software-rotated kernels.
 #define SHADOW_SAMPLES 4 // [4 6 9]
 
 const int shadowMapResolution = 1024; // [512 1024 2048]
@@ -46,6 +46,7 @@ const int shadowMapResolution = 1024; // [512 1024 2048]
 const float shadowDistance = 64.0; // [48.0 64.0 80.0 96.0 128.0]
 
 const float shadowDistanceRenderMul = 1.0; // [0.5 0.75 1.0]
+const bool shadowHardwareFiltering = true;
 
 // Screen space ambient occlusion. Runs once per screen pixel in composite.
 #define SSAO 1 // [0 1]

@@ -82,11 +82,13 @@ frame-time feedback controller. Choose a profile or adjust its exposed values ma
 ### Shadows
 
 A single map avoids the geometry submission cost of cascades. The Performance profile uses
-a 1024 map and 64-block distance with four taps. Iris' `shadow.culling=true` and
+a 1024 map and 64-block distance. Iris' `shadow.culling=true` and
 `shadowDistanceRenderMul=1.0` make the configured radius participate in actual shadow-pass
-geometry culling, rather than only shrinking the projection matrix. The four low-cost taps
-use a symmetric 2x2 kernel; higher profiles use more samples and per-pixel rotation. The
-same depth reads also estimate the near-field contact term, avoiding a second four-tap loop.
+geometry culling. Performance uses Iris' hardware 2x2 PCF comparison sampler for the direct
+shadow and one raw centre-depth read for contact darkening. Balanced and Visual retain their
+software 6/9-tap rotated kernels. This keeps dynamic shadows while moving the 2x2 comparison
+filter into the GPU's texture-sampling hardware. It requires Iris'
+`SEPARATE_HARDWARE_SAMPLERS` feature.
 
 This is still a real shadow pass. It is not replaced with fake vertex shading or disabled
 to obtain the Performance preset.

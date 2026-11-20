@@ -21,7 +21,7 @@ target laptop remain untested. No new release has been published from this branc
 
 ### Iris, not OptiFine
 
-This pack is written for **Iris 1.8.x on Minecraft 1.21.5**, and follows the Iris 1.21.5
+This pack is written for **Iris 1.8.5 or newer on Minecraft 1.21.5**, and follows the Iris 1.21.5
 shader template layout: `RENDERTARGETS` instead of the OptiFine-era `DRAWBUFFERS`, and
 `mc_Entity` for block identity. It is not tested under OptiFine and is not meant to be.
 
@@ -236,9 +236,10 @@ for this laptop. Overdraw is the cost, and on Minecraft terrain it is small.
 Wrapped diffuse so a block's terminator is not a hard painted line. Hemisphere ambient
 that gives every shape a top-lit gradient. Block light only partly occluded by vertex AO,
 so a torch can still reach into a corner. A deep blue night floor, because a neutral one
-is what makes cheap night scenes look like a dimmed day. The Performance profile uses one 1024 shadow map with four taps; higher profiles increase
-map resolution, distance and taps. The directional shadow and near-field contact term
-reuse the same depth reads.
+is what makes cheap night scenes look like a dimmed day. The Performance profile uses one 1024 shadow map and a 64-block radius. Iris' hardware
+2x2 PCF comparison sampler handles the directional shadow in one sampler operation, with
+one raw centre-depth read retained for contact darkening. Balanced and Visual use the
+software 6/9-tap rotated kernels. All profiles retain dynamic shadows.
 
 Two things about that pass are worth naming, because both were wrong at some point and
 neither is visible from inside the shading code:
