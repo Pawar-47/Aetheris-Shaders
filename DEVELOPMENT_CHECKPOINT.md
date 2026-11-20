@@ -1,70 +1,60 @@
 # Current development checkpoint — 2026-11-21
 
-## Active branch and exact state
+## Active branch and scope
 
 - Repository: Pawar-47/Aetheris-Shaders
-- Active work branch: perf/full-feature-performance
-- Branch head before documentation alignment: 4a6b686a3a4f5dae2ae0fd4fd8bc5298f2630746
-- Parent implementation commit: 168fbebf0bdef3be294f66779d2ad607fa2b0fcd
+- Work branch: perf/full-feature-performance
+- Latest code-validation commit: a38bb8fba37c1555d2f0d1c74a63477ad3eab108
+- Latest documentation commit before this checkpoint: 9c0bad9615136ebfcf54355daee95a4d652e38de
 - Version in VERSION: 1.6.1
-- Default branch: main (not changed by this checkpoint)
-- No merge or GitHub Release has been made from this branch.
+- Default branch: main; it has not been changed.
+- No pull request, merge or GitHub Release has been created.
 
-## Work already present
+## Completed in this continuation
 
-The branch contains the feature-preserving low-end pipeline:
-- Shadows, AO, water reflections, cloud detail/cirrus, FXAA, bloom, screen-space light
-  shafts, vegetation wind, water waves and material gloss remain enabled in Performance.
-- Shadow sampling and contact darkening share the same depth reads.
-- SSAO uses derivatives to avoid four neighbouring depth reads.
-- Bloom and screen-space light shafts share two low-resolution buffers.
-- The material gloss path uses a curated block ID map and no companion resource pack.
-- The validator checks that Performance does not disable the required effects.
+- Aligned README presets and verification claims with the feature-preserving pipeline.
+- Removed obsolete probe-pack installation instructions.
+- Rewrote docs/PERFORMANCE.md with the actual low-end budgets and honest limitations.
+- Refreshed the active checkpoint while retaining the historical notes below.
+- Strengthened tools/validate.py so it checks every retained Performance effect, shadow
+  culling, both low-resolution effects in both program-enable expressions, buffer scales,
+  and the composite1 -> composite2 -> final effects-buffer route.
+- Corrected the validator's property parser to handle the spaces around equals signs used
+  in shaders.properties. The first stricter-validator run exposed this parser bug; it was
+  fixed and the next run passed.
 
-## Documentation completed in this continuation
+## CI result
 
-- README preset table and verification status aligned with the 1.6.1 branch.
-- docs/PERFORMANCE.md rewritten to explain the actual per-effect budgets and limitations.
-- The current checkpoint is being refreshed; historical checkpoint notes remain below it.
+<https://github.com/Pawar-47/Aetheris-Shaders/actions/runs/44799052684>
 
-## Recorded CI evidence
+- Run ID: 44799052684
+- Tested commit: a38bb8fba37c1555d2f0d1c74a63477ad3eab108
+- Final GitHub Actions conclusion: **success**
+- Static validation: passed.
+- GLSL compile and program-link check: passed; all 46 stages compile and every program links.
+- Block ID consistency: passed.
+- Option-label check: passed.
+- Packaging: passed; Aetheris-Shaders-1.6.1.zip generated.
+- Artifact upload: passed; artifact ID 14659743064.
 
-GitHub Actions run: 44798190121  
-Commit tested: 4a6b686a3a4f5dae2ae0fd4fd8bc5298f2630746
+## Remaining verification boundary
 
-The job log reports:
-- static validation passed;
-- all 46 shader stages compiled and every program linked;
-- block IDs agreed;
-- option-label checks passed;
-- tools/package.sh produced build/Aetheris-Shaders-1.6.1.zip;
-- artifact upload completed successfully (artifact ID 14658418770).
+The CI build is successful, but it is not a runtime test. Iris has not yet been confirmed
+loading the pack on Minecraft 1.21.5 on the target Linux Mint machine. No live-world visual
+review, FPS benchmark, frame-time capture, GPU temperature measurement or memory measurement
+has been performed. Do not claim that the pack is runtime-tested or tuned to measured FPS.
 
-The GitHub Actions API still reports the run as in progress even though its log reaches
-successful artifact upload. Do not call the overall workflow conclusively green until GitHub
-records a terminal status.
+## Next steps
 
-## What is not verified
-
-- Iris has not been confirmed loading this branch in Minecraft 1.21.5.
-- No live-world visual review has been performed.
-- No FPS or frame-time benchmark has been taken on the Core i3-5005U / HD 5500.
-- The CI compiler transformation is not a substitute for Iris' own runtime preprocessing
-  and the actual Mesa/OpenGL driver.
-
-## Immediate next actions
-
-1. Verify the latest documentation commit and inspect for stale claims.
-2. Check whether the existing Actions run reached a terminal result; trigger a fresh CI run
-   through a new branch commit only if the current run is still genuinely stuck.
-3. Inspect the generated 1.6.1 artifact and its root layout.
-4. Test that exact artifact in Minecraft 1.21.5 with Iris 1.8.x on the target Linux Mint
-   machine. Enable Iris debug mode before applying it.
-5. If it fails, fix the first concrete error in logs/latest.log or the patched shader source;
-   do not guess at fixes from the empty Iris details pane.
-6. If it loads, capture screenshots and benchmark a repeatable scene before tuning defaults.
-7. Keep the work on this branch. Do not merge to main or publish a release without an
-   explicit instruction.
+1. Install the exact 1.6.1 CI artifact in the target SK Launcher instance with Iris 1.8.x and
+   Sodium. Enable Iris debug mode before applying it.
+2. If it fails, diagnose the first concrete log or patched-shader error; do not guess from
+   an empty on-screen details pane.
+3. If it loads, capture screenshots and benchmark a repeatable scene at 1280x720 / 6 chunks.
+   Compare Performance and Balanced without changing multiple variables at once.
+4. Use those real measurements to tune the default settings.
+5. Keep all work on this branch. Do not merge to main or publish a release unless explicitly
+   instructed.
 
 ---
 
