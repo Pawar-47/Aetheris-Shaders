@@ -11,10 +11,11 @@ and re-derives its own version of it at a fraction of the cost.
 
 **Branch build: 1.6.1 (perf/full-feature-performance).** GitHub Actions run 44799052684
 completed successfully: static validation, GLSL compilation/linking of all 46 stages,
-option and block-ID checks, ZIP packaging and artifact upload all passed. This is not an
-in-game verification: Iris loading, visual output and frame rate on the target laptop remain
-untested. No 1.6.1 GitHub Release has been published from this branch. See
-[verification status](#what-has-and-has-not-been-verified).
+option and block-ID checks, ZIP packaging and artifact upload all passed. The repository's
+published v1.6.1 tag points to an older commit on main and does **not** contain this branch's
+feature-preserving pipeline; use the branch's CI artifact to test these changes. Iris loading,
+visual output and frame rate on the target laptop remain untested. No new release has been
+published from this branch. See [verification status](#what-has-and-has-not-been-verified).
 
 ### Iris, not OptiFine
 
@@ -45,9 +46,10 @@ against, not a compromise between a laptop and a desktop.
 ## Installation
 
 1. Install **Iris 1.8.x** and **Sodium** for Minecraft 1.21.5.
-2. Download `Aetheris-Shaders-<version>.zip` from
-   [Releases](../../releases) when a release is available. The current 1.6.1 branch build is
-   available as a GitHub Actions artifact, not as a published Release.
+2. For the feature-preserving changes on this branch, download the 1.6.1 ZIP from the
+   [successful branch CI run](https://github.com/Pawar-47/Aetheris-Shaders/actions/runs/44799052684).
+   The repository's published v1.6.1 Release is based on an older commit and does not contain
+   these changes.
 3. Drop it in `.minecraft/shaderpacks/` without unzipping it. On Linux Mint that is
    usually `~/.minecraft/shaderpacks/` or inside the SK Launcher instance folder.
 4. In game: `Options -> Video Settings -> Shader Packs -> Aetheris Shaders`.
@@ -264,8 +266,8 @@ resource pack.
 
 ## What has and has not been verified
 
-The evidence below is tied to the perf/full-feature-performance branch at commit
-4a6b686a3a4f5dae2ae0fd4fd8bc5298f2630746.
+The implementation evidence below is tied to the perf/full-feature-performance branch at
+commit a38bb8fba37c1555d2f0d1c74a63477ad3eab108. The documentation-only updates followed it.
 
 **Completed steps in the recorded GitHub Actions job**
 
