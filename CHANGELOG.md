@@ -49,6 +49,7 @@ from inside the code until the pipeline was traced end to end.
   them and it throws while transforming a vertex stage otherwise; and `mc_Entity` must be a
   `vec2`, as Iris documents it.
 
+## [1.1.0] - 2026-11-25
 
 The first release after 1.0.0, and the first one whose Iris loading path was checked against
 Iris' own documentation and transform source rather than against OptiFine lore. It also
