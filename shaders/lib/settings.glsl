@@ -88,7 +88,10 @@ const float shadowDistance = 96.0; // [64.0 80.0 96.0 128.0]
 
 #define BLOCKLIGHT_STRENGTH 1.0 // [0.0 1.0 3.0]
 
-#define FOG_DENSITY 1.0 // [0.0 1.0 3.0]
+// Distance haze and height fog. 0.0 removes fog entirely, including the fade that hides
+// the edge of the render distance; 0.5 is the designed look, and anything past 1.5 is
+// deliberate mist.
+#define FOG_DENSITY 0.5 // [0.0 0.5 1.0 1.5 2.0 3.0]
 
 #define FOG_HEIGHT 72.0 // [24.0 72.0 256.0]
 

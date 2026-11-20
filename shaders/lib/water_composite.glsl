@@ -29,9 +29,11 @@
 
 uniform sampler2D colortex0;
 
-/* Extinction per block, per channel. Red absorbs about eight times faster than
- * blue, so a metre of water already looks like a metre of water. */
-const vec3 WATER_EXTINCTION = vec3(0.420, 0.088, 0.055);
+/* Extinction per block, per channel. Red is gone within a couple of blocks, green a
+ * little after it, blue last — which is the whole reason open water is blue and a
+ * shallow shore is not. Tuned for sea rather than lake: the green channel absorbs
+ * faster than it used to, so ten blocks of water reads deep blue instead of cyan. */
+const vec3 WATER_EXTINCTION = vec3(0.480, 0.115, 0.048);
 
 /* One sample of the cloud deck seen in a reflection.
  *
@@ -57,7 +59,9 @@ vec4 aetherisCheapCloudSample(vec3 dir, AetherisSky sky) {
     float density = saturate((mass - threshold) * 2.6);
     if (density <= 0.01) return vec4(0.0);
 
-    vec3 tone = sky.ambientSky * 4.1 + sky.sunRadiance * 0.55;
+    // Matched to the cumulus deck's lit tone in clouds.glsl, so a reflection shows the same
+    // stylised clouds as the sky above it rather than a paler copy.
+    vec3 tone = sky.ambientSky * 5.0 + sky.sunRadiance * 0.75;
     tone = mix(tone, vec3(luma(tone)) * vec3(0.82, 0.85, 0.90), sky.rain * 0.7);
 
     return vec4(tone * density, density * 0.88);
@@ -170,8 +174,10 @@ vec3 aetherisWaterSurface(vec2 uv, vec4 waterData, AetherisSky sky, vec3 sceneCo
     vec3 transmittance = exp(-extinction * thickness);
 
     // Light that scattered inside the body rather than passing straight through.
+    // Sea water scatters blue, not teal: the green channel is deliberately well below
+    // the blue here, which is what stops deep water reading as a swimming pool.
     vec3 incident = sky.ambientSky * 1.9 + sky.sunRadiance * 0.14;
-    vec3 scatterColour = vec3(0.075, 0.240, 0.255) * incident;
+    vec3 scatterColour = vec3(0.020, 0.110, 0.215) * incident;
 
     vec3 body = refracted * transmittance + scatterColour * (vec3(1.0) - transmittance);
 

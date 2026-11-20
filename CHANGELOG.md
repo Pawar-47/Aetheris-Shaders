@@ -6,6 +6,32 @@ All notable changes to Aetheris Shaders are recorded here. The format follows
 
 A release is made when there is something worth installing, not when a number changes.
 
+## [1.5.5] - 2026-12-01
+
+Three changes, all art direction rather than correctness.
+
+### Changed
+
+- **Clouds are stylised.** Fewer and larger masses (one feature per ~300 blocks instead of
+  230), a flat full base that reaches density inside the first tenth of the slab, crowns that
+  rise steeply so the silhouette is domed, and edge erosion cut to a sixth of what it was and
+  confined to the top third — heavy erosion is what makes procedural clouds look like mush at
+  this resolution. Lighting is graphic rather than photographic: the lit and shaded tones sit
+  further apart, the terminator between them is narrowed with a smoothstep so a mass reads as
+  a lit crown over a shaded body, and the skirt uses a smoothstep instead of a power curve for
+  a cleaner edge. The cirrus veil is dimmed to an accent.
+- **Fog obeys its slider, and there is far less of it.** The distance haze was 1/320, which
+  put visible haze on anything past about forty blocks — most of a six-chunk render distance.
+  It is 1/900, the height term is at 45%, and the render-distance fade that hides the edge of
+  the world is now scaled by `FOG_DENSITY` and starts later. That fade was previously applied
+  unconditionally, which is exactly why setting `FOG_DENSITY` to 0 still left a band of haze
+  at the far plane and the fog felt like it had no control. 0.0 is now genuinely clear air;
+  the default is 0.5 instead of 1.0.
+- **Water is sea coloured.** The green channel absorbs faster (0.115 against 0.088) and the
+  in-scattering is blue dominant, so ten blocks of water reads deep blue rather than cyan, and
+  shallows read turquoise rather than green. The underwater tint follows the same palette, and
+  the cheap cloud sample used by water reflections matches the new deck.
+
 ## [1.5.4] - 2026-12-01
 
 A full pass over the pack rather than a reaction to a log line: one reported error fixed, and

@@ -36,10 +36,11 @@
  * property of the look and not something worth exposing. */
 const float CLOUD_THICKNESS = 74.0;
 
-/* Field frequency in the horizontal plane, per block, before CLOUD_SCALE. One
- * feature every ~230 blocks puts roughly fifteen to twenty separate masses in an
- * open sky view once perspective compresses them towards the horizon. */
-const float CLOUD_FIELD_SCALE = 1.0 / 230.0;
+/* Field frequency in the horizontal plane, per block, before CLOUD_SCALE. One feature
+ * every ~300 blocks gives fewer, larger masses: the deck reads as a handful of defined
+ * shapes rather than as a scattering of small puffs, which is the point of a stylised
+ * sky. */
+const float CLOUD_FIELD_SCALE = 1.0 / 300.0;
 
 /* Absorption per block of density. Chosen so a solid core about seventy blocks
  * deep goes opaque in three or four steps. */
@@ -68,10 +69,13 @@ float aetherisCloudDensity(vec2 worldXZ, float g, vec2 wind, vec2 lightXZ,
     // free: valueNoiseGradient hashed the same four corners valueNoise would.
     shade = saturate(dot(field.yz, lightXZ) * 3.6);
 
-    // Erode the crowns, leave the base solid.
+    // Erode the crowns only, and lightly. This one constant decides whether the deck reads
+    // as weather or as shape: heavy erosion gives realistic wispy edges and, at this
+    // resolution, mush. A sixth of it, confined to the top third, leaves the silhouettes
+    // clean and lets the flat base and the rounded crown do the work.
 #if CLOUD_DETAIL == 1
     float erosion = valueNoise(q * 4.7 + vec2(31.7, 17.3)) - 0.5;
-    mass += erosion * 0.17 * smoothstep(0.12, 0.92, g);
+    mass += erosion * 0.06 * smoothstep(0.55, 1.0, g);
 #endif
 
     // One octave of value noise concentrates hard around 0.5, so the base threshold is
@@ -81,17 +85,19 @@ float aetherisCloudDensity(vec2 worldXZ, float g, vec2 wind, vec2 lightXZ,
     // height, so the crowns break into separate rounded puffs instead of the whole slab
     // ending in a flat cut.
     float threshold = mix(0.70, 0.40, saturate(CLOUD_COVERAGE));
-    threshold += smoothstep(0.08, 1.0, g) * 0.34;
+    threshold += smoothstep(0.05, 0.80, g) * 0.30;
 
     float density = saturate((mass - threshold) * 2.3);
 
-    // A soft shelf at the base, and a slight erosion of the very top so crowns do
-    // not end in a flat cut where the slab does.
-    density *= mix(0.42, 1.0, smoothstep(0.0, 0.20, g));
+    // A flat, full base and a slight falloff at the top. The shelf reaches almost full
+    // density within the first tenth of the slab, so bottoms are straight lines rather than
+    // gradients: flat bottoms and domed tops are what the eye reads as a drawn cloud.
+    density *= mix(0.62, 1.0, smoothstep(0.0, 0.10, g));
     density *= 1.0 - 0.20 * g * g;
 
-    // Soft saturation: thin edges stay wispy while cores approach a solid tone.
-    return density * inversesqrt(density * density + 0.40);
+    // Soft saturation with a lower knee, so a mass reaches a solid tone sooner and has a
+    // body instead of a gradient.
+    return density * inversesqrt(density * density + 0.18);
 }
 
 /* Draw the cumulus deck over an existing sky colour. */
@@ -174,9 +180,9 @@ vec3 aetherisRenderClouds(vec3 dir, AetherisSky sky, vec3 skyColour) {
 
             // Dark base, bright crown, thick cores grey. sqrt is the cheap stand in
             // for pow(g, 1.5).
-            float heightLight = 0.20 + 0.80 * (g * sqrt(g));
+            float heightLight = 0.10 + 0.90 * (g * sqrt(g));
             heightLight *= 1.0 - density * 0.40;
-            heightLight *= 1.0 - shade * 0.62;
+            heightLight *= 1.0 - shade * 0.78;
             heightLight = mix(heightLight, 1.0, scattering * 0.70);
 
             // Near the horizon the march is too sparse to integrate honestly, so cap
@@ -202,17 +208,23 @@ vec3 aetherisRenderClouds(vec3 dir, AetherisSky sky, vec3 skyColour) {
     // The two tones a cloud can be. Both are built from the same ambient and sun as
     // the terrain, so a sunset that turns the ground orange turns the clouds orange
     // by the same amount rather than by a hand matched value.
-    vec3 shadeTone = sky.ambientSky * 1.55 + vec3(0.010, 0.013, 0.021) * sky.night;
-    vec3 litTone = sky.ambientSky * 4.60 + sky.sunRadiance * 0.62;
+    vec3 shadeTone = sky.ambientSky * 1.20 + vec3(0.010, 0.013, 0.021) * sky.night;
+    vec3 litTone = sky.ambientSky * 5.60 + sky.sunRadiance * 0.85;
 
-    vec3 cloudColour = mix(shadeTone, litTone, saturate(lit / max(absorbed, 1.0e-4)));
+    // A stylised deck is graphic rather than photographic: the two tones sit further apart
+    // than a real cumulus, and the terminator between them is narrowed so a mass reads as a
+    // lit crown over a shaded body instead of as a smoothly shaded sphere.
+    float shape = saturate(lit / max(absorbed, 1.0e-4));
+    shape = smoothstep(0.18, 0.82, shape);
+
+    vec3 cloudColour = mix(shadeTone, litTone, shape);
 
     // Rain flattens the deck into an overcast sheet.
     cloudColour = mix(cloudColour, vec3(luma(cloudColour)) * vec3(0.80, 0.84, 0.90), sky.rain * 0.70);
 
-    // Soften the skirt: this thins the outer few percent of every puff to nothing
-    // while the cores stay solid, which is most of what reads as a soft edge.
-    alpha *= sqrt(alpha);
+    // Soften the skirt. A smoothstep keeps the core at full opacity and still takes the
+    // edge to nothing, which reads as a cleaner silhouette than a straight power curve.
+    alpha = alpha * alpha * (3.0 - 2.0 * alpha);
 
     // Grazing rays skim the slab rather than entering it. Fade them out instead of
     // letting the deck smear along the skyline.
@@ -260,7 +272,7 @@ vec3 aetherisRenderCirrus(vec3 dir, AetherisSky sky, vec3 skyColour) {
     // Fade out at the horizon so the veil does not become a hard band.
     float horizonFade = smoothstep(0.015, 0.22, dirY);
 
-    return mix(skyColour, tint, saturate(density) * 0.34 * horizonFade);
+    return mix(skyColour, tint, saturate(density) * 0.18 * horizonFade);
 #endif
 }
 

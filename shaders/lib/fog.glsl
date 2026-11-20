@@ -32,7 +32,9 @@ const float FOG_BASE_HEIGHT = 58.0;
 /* The colour underwater fog goes to. Shared with composite, which uses it to fill
  * the sky when the eye is submerged: there is no sky down there, only water. */
 vec3 aetherisUnderwaterTint(AetherisSky sky, vec3 direction) {
-    vec3 deep = vec3(0.016, 0.072, 0.098) * (0.30 + 1.05 * sky.day);
+    // Sea blue rather than lake green: the deep colour is what the surface fades to as
+    // well, so the two read as the same water.
+    vec3 deep = vec3(0.006, 0.038, 0.080) * (0.30 + 1.05 * sky.day);
     float towardsSun = saturate(dot(direction, sky.sunDir) * 0.5 + 0.5);
     vec3 tint = deep + sky.sunRadiance * (0.020 * towardsSun)
               + sky.night * vec3(0.004, 0.010, 0.020);
@@ -73,17 +75,25 @@ vec3 aetherisApplyFog(vec3 colour, vec3 playerPos, AetherisSky sky) {
     float farDensity  = exp(-max(fragmentHeight - FOG_BASE_HEIGHT, 0.0) * (1.0 / FOG_HEIGHT));
 
     // Weighted towards the far end: on a ray that climbs, most of the path really is
-    // near the far end, and on a flat ray the two agree anyway.
-    float heightTerm = nearDensity * 0.35 + farDensity * 0.65;
+    // near the far end, and on a flat ray the two agree anyway. The 0.45 is what keeps
+    // the default reading as air rather than as weather: Minecraft's scale is small
+    // enough that a physically scaled height term looks like a permanent sea mist.
+    float heightTerm = (nearDensity * 0.35 + farDensity * 0.65) * 0.45;
 
     // Rain thickens the air substantially, which is most of what sells a storm.
     float density = heightTerm * FOG_DENSITY * (1.0 + 1.40 * sky.rain);
 
-    float amount = 1.0 - exp(-distanceToCamera * density * (1.0 / 320.0));
+    // 1/900 rather than 1/320. The old constant put a visible haze on anything past
+    // about forty blocks, which on a six to eight chunk render distance is most of
+    // what you can see.
+    float amount = 1.0 - exp(-distanceToCamera * density * (1.0 / 900.0));
 
-    // Hide the edge of the render distance. Ramped over the last fifth so it reads
-    // as haze closing in rather than as a wall.
-    amount = max(amount, smoothstep(far * 0.80, far * 0.995, distanceToCamera) * 0.94);
+    // Hide the edge of the render distance, and let the same slider own it. This used
+    // to be unconditional, so FOG_DENSITY = 0 still left a hard band of haze at the
+    // far plane — which is why the fog felt like it had no control at all. It starts
+    // later and it scales with the slider now, so 0.0 really is clear air.
+    float edgeFade = smoothstep(far * 0.88, far * 0.995, distanceToCamera) * 0.90;
+    amount = max(amount, edgeFade * saturate(FOG_DENSITY));
 
     // ------------------------------------------------------------------- haze tint
     vec3 direction = normalize(playerPos);
@@ -91,7 +101,7 @@ vec3 aetherisApplyFog(vec3 colour, vec3 playerPos, AetherisSky sky) {
 
     // Forward scattering: the haze brightens when looking into the light.
     float glow = miePhaseNormalised(dot(direction, sky.lightDir), 0.70);
-    haze += (sky.sunRadiance + sky.moonRadiance) * (0.16 * glow);
+    haze += (sky.sunRadiance + sky.moonRadiance) * (0.10 * glow);
 
     return mix(colour, haze, saturate(amount));
 }
