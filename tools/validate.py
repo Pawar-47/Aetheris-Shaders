@@ -536,15 +536,21 @@ def check_options():
 def check_performance_profile():
     """Keep the low-end preset feature-complete; quality may fall, effects may not vanish."""
     properties = read_text(os.path.join(SHADERS, "shaders.properties"))
-    match = re.search(r"^profile\\.PERFORMANCE\\s*=\\s*(.*)$", properties, re.MULTILINE)
-    if not match:
+    profile_line = next(
+        (line.strip() for line in properties.splitlines()
+         if line.strip().startswith("profile.PERFORMANCE")),
+        None,
+    )
+    if not profile_line or "=" not in profile_line:
         fail("shaders.properties: profile.PERFORMANCE is missing")
         return
+
     values = {}
-    for token in match.group(1).split():
+    for token in profile_line.split("=", 1)[1].split():
         if "=" in token:
             name, value = token.split("=", 1)
             values[name] = value
+
     required = {
         "SHADOWS": "1", "SSAO": "1", "WATER_REFLECTIONS": "1",
         "CLOUDS": "1", "CLOUD_DETAIL": "1", "CLOUD_CIRRUS": "1",
@@ -554,15 +560,20 @@ def check_performance_profile():
     for name, expected in required.items():
         if values.get(name) != expected:
             fail("profile.PERFORMANCE: %s must remain enabled (expected %s)" % (name, expected))
+
     if values.get("shadowDistanceRenderMul") != "1.0":
         fail("profile.PERFORMANCE: shadowDistanceRenderMul must enable real shadow-pass culling")
+
+    lines = [line.strip() for line in properties.splitlines()]
     for buffer in ("colortex3", "colortex4"):
-        if not re.search(r"^size\\.buffer\\.%s\\s*=\\s*0\\.25\\s+0\\.25$" % buffer,
-                         properties, re.MULTILINE):
+        prefix = "size.buffer.%s" % buffer
+        if not any(line.startswith(prefix) and "0.25 0.25" in line for line in lines):
             fail("shaders.properties: %s must remain a quarter-resolution composite buffer" % buffer)
+
     for program in ("composite1", "composite2"):
-        if not re.search(r"^program\\.%s\\.enabled\\s*=.*(?:BLOOM|VOLUMETRIC_LIGHT)" % program,
-                         properties, re.MULTILINE):
+        prefix = "program.%s.enabled" % program
+        if not any(line.startswith(prefix) and ("BLOOM" in line or "VOLUMETRIC_LIGHT" in line)
+                   for line in lines):
             fail("shaders.properties: %s must be conditionally enabled for retained low-resolution effects"
                  % program)
 
