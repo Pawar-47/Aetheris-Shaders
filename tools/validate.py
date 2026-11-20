@@ -455,7 +455,8 @@ gbuffers_skytextured gbuffers_clouds gbuffers_terrain gbuffers_terrain_solid
 gbuffers_terrain_cutout gbuffers_damagedblock gbuffers_block gbuffers_beaconbeam
 gbuffers_entities gbuffers_entities_glowing gbuffers_entities_translucent
 gbuffers_armor_glint gbuffers_spidereyes gbuffers_hand gbuffers_hand_water gbuffers_weather
-gbuffers_water shadow shadow_solid shadow_cutout final
+gbuffers_water gbuffers_lightning gbuffers_particles gbuffers_particles_translucent
+gbuffers_block_translucent shadow shadow_solid shadow_cutout final
 """.split())
 
 SUFFIXED_PROGRAMS = ("composite", "deferred", "begin", "prepare", "setup", "shadowcomp")
