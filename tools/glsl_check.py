@@ -87,6 +87,15 @@ def rewrite(unit):
             out.append(line)
     unit = "".join(out)
 
+    # Iris consumes the buffer format directives itself: it reads `const int colortexNFormat`
+    # to decide what to allocate, then removes the line, which is why packs can write
+    # `= RGBA16F` and still compile in game. Remove them here for the same reason, or glslang
+    # reports RGBA16F as an undeclared identifier and a constant initialiser that is not
+    # constant. Every declaration is replaced by an empty line so the line numbers hold.
+    unit = validate.re.sub(
+        r'^[ \t]*const[ \t]+int[ \t]+(?:colortex|shadowcolor)\d+Format[ \t]*=[^\n]*',
+        '', unit, flags=validate.re.MULTILINE)
+
     for old, new, _ in LEGACY:
         unit = validate.re.sub(r'\b%s\b' % old, new, unit)
 
