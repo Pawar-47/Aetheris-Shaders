@@ -5,17 +5,18 @@
 - Repository: Pawar-47/Aetheris-Shaders
 - Work branch: perf/full-feature-performance
 - Latest code-validation commit: a38bb8fba37c1555d2f0d1c74a63477ad3eab108
-- Latest documentation commit before this checkpoint: 9c0bad9615136ebfcf54355daee95a4d652e38de
-- Version in VERSION: 1.6.1
+- Latest README commit before this checkpoint: cc018b0f6db1b0ddc8651db4ac2a8d09f5e1accf
+- Version file: 1.6.1
 - Default branch: main; it has not been changed.
-- No pull request, merge or GitHub Release has been created.
+- The published v1.6.1 tag points to e2f7bb73c7848576895ae8041e8237e31970f1f3 on main. It predates this branch's feature-preserving pipeline.
+- No new release has been published from this branch.
 
 ## Completed in this continuation
 
 - Aligned README presets and verification claims with the feature-preserving pipeline.
 - Removed obsolete probe-pack installation instructions.
+- Clarified that the existing v1.6.1 release is older than this branch and does not contain the new pipeline.
 - Rewrote docs/PERFORMANCE.md with the actual low-end budgets and honest limitations.
-- Refreshed the active checkpoint while retaining the historical notes below.
 - Strengthened tools/validate.py so it checks every retained Performance effect, shadow
   culling, both low-resolution effects in both program-enable expressions, buffer scales,
   and the composite1 -> composite2 -> final effects-buffer route.
@@ -25,11 +26,10 @@
 
 ## CI result
 
-<https://github.com/Pawar-47/Aetheris-Shaders/actions/runs/44799052684>
+[GitHub Actions run 44799052684](https://github.com/Pawar-47/Aetheris-Shaders/actions/runs/44799052684)
 
-- Run ID: 44799052684
 - Tested commit: a38bb8fba37c1555d2f0d1c74a63477ad3eab108
-- Final GitHub Actions conclusion: **success**
+- Final conclusion: **completed / success**
 - Static validation: passed.
 - GLSL compile and program-link check: passed; all 46 stages compile and every program links.
 - Block ID consistency: passed.
@@ -53,8 +53,8 @@ has been performed. Do not claim that the pack is runtime-tested or tuned to mea
 3. If it loads, capture screenshots and benchmark a repeatable scene at 1280x720 / 6 chunks.
    Compare Performance and Balanced without changing multiple variables at once.
 4. Use those real measurements to tune the default settings.
-5. Keep all work on this branch. Do not merge to main or publish a release unless explicitly
-   instructed.
+5. Keep all work on this branch. Do not merge to main or publish a new release unless
+   explicitly instructed.
 
 ---
 
