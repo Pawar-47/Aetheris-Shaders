@@ -32,6 +32,28 @@ A full pass over the pack rather than a reaction to a log line.
   such a file in silence and draws that geometry with its own shader, which is
   indistinguishable from "the pack is doing nothing" for that pass.
 
+## [1.5.4] - 2026-12-01
+
+`lines: 0:1(10): error: the compatibility profile is not supported`
+
+That message names Iris' line program, and it is the one program Iris never fixes the
+version profile for.
+
+### Fixed
+
+- **`gbuffers_line` and `gbuffers_basic` removed.** In `TransformPatcher`, `isLines()` forces
+  the **core** branch regardless of the declared profile, and that branch patches the version
+  *number* but never sets `profile = CORE`; only the legacy branch does. So
+  `#version 330 compatibility` reached Mesa unchanged, and this driver has no compatibility
+  profile above GL 3.0, so it refused the program outright. Iris draws lines itself when the
+  pack does not ask to; nothing in the pack's look depended on shading them.
+
+### Added
+
+- The validator now rejects a line program (`gbuffers_line`, `gbuffers_basic`) whose stages
+  declare the compatibility profile — the exact combination Iris cannot compile on a
+  core-profile driver.
+
 ## [1.5.3] - 2026-12-01
 
 Iris reported `'RGBA16F' undeclared` in composite, and it was right: the buffer format

@@ -553,6 +553,30 @@ def main():
         if name not in programs:
             fail("required program '%s' is missing" % name)
 
+    # Iris never rewrites the version *profile* for its line programs. TransformPatcher takes
+    # the core branch whenever isLines() is true, and that branch patches the version number
+    # but does not set profile = CORE, so a compatibility version statement reaches the
+    # driver, which on Linux/Mesa has no compatibility profile above GL 3.0 and refuses it:
+    #   lines: 0:1(10): error: the compatibility profile is not supported
+    # So a line program may exist, but it must be core.
+    for name in ("gbuffers_line", "gbuffers_basic"):
+        stages = programs.get(name)
+        if not stages:
+            continue
+        for path in stages.values():
+            header = ""
+            for line in read_text(path).splitlines():
+                candidate = line.strip()
+                if candidate and not candidate.startswith("//"):
+                    header = candidate
+                    break
+            if header.startswith("#version") and "compatibility" in header:
+                fail("%s: '%s' is a line program, and Iris does not rewrite the version "
+                     "profile for those; a compatibility profile reaches the driver and is "
+                     "rejected. Either use #version 330 core with Iris' modern attributes, or "
+                     "ship no %s program at all"
+                     % (os.path.relpath(path, ROOT), header, name))
+
     for name, stages in sorted(programs.items()):
         check_program_name(name)
         if "vsh" not in stages:
