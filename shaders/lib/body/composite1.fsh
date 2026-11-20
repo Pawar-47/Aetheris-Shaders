@@ -8,6 +8,9 @@ in vec2 texcoord;
 layout(location = 0) out vec4 outEffects;
 
 vec3 aetherisExtractBloom(vec3 colour) {
+    // R11F_G11F_B10F is unsigned HDR. Bloom is radiance, so discard any negative
+    // pre-grade channel before writing the compact no-sign-bit effect buffer.
+    colour = max(colour, vec3(0.0));
     float brightness = max(max(colour.r, colour.g), colour.b);
     float knee = max(BLOOM_THRESHOLD * 0.5, 1.0e-4);
     float soft = clamp(brightness - BLOOM_THRESHOLD + knee, 0.0, 2.0 * knee);
