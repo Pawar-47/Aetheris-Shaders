@@ -32,6 +32,33 @@ Three changes, all art direction rather than correctness.
   shallows read turquoise rather than green. The underwater tint follows the same palette, and
   the cheap cloud sample used by water reflections matches the new deck.
 
+## [1.6.0] - 2026-12-02
+
+Three complaints, each fixed by porting the approach of the reference pack — MakeUp, as it
+ships in SiraLite Shaders' `Custom/` and `Ref/` folders.
+
+### Changed
+
+- **Clouds are stylised.** The deck is shaped the way MakeUp shapes it: a coverage constant is
+  subtracted from the noise field and clamped, instead of a soft threshold followed by a long
+  ramp, so a puff gains an *edge* instead of fading out. The coverage rises with height inside
+  the slab, so the base stays a continuous sheet while the crowns break into separate puffs,
+  and `x / sqrt(x² + k)` gives each puff a body with a defined border. `CLOUD_SOFTNESS` is new
+  and defaults to 0.0: defined silhouettes. 1.0 is the old wispy look, which at this step
+  count reads as drizzle.
+- **Water is sea-coloured, and the colour is yours.** The body colour is authored the way
+  MakeUp authors it — `WATER_RED` / `WATER_GREEN` / `WATER_BLUE`, 0-255 per channel, squared
+  into linear light — with a default that is sea blue rather than lake teal. The underwater
+  tint reads the same three numbers, so the water you look at and the water you look through
+  are one body. The hard-coded scatter vector is gone.
+- **Fog starts where you tell it to.** `FOG_START` is new and defaults to 56 blocks: before
+  that distance the air is clear, which is the difference between atmosphere and permanent
+  mist. `FOG_DENSITY` defaults to 0.35 instead of 0.5, the ramp is gentler (1/520 per block
+  rather than 1/900), rain thickens it less, and the render-distance edge fade begins at 92%
+  of the far plane instead of 88% and tops out lower.
+- All of it is in the settings screen: **Fog density, Fog start distance, Fog height, Cloud
+  softness, Sea red, Sea green, Sea blue** — the fog and water controls that were missing.
+
 ## [1.5.4] - 2026-12-01
 
 A full pass over the pack rather than a reaction to a log line: one reported error fixed, and

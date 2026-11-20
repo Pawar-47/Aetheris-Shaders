@@ -78,26 +78,31 @@ float aetherisCloudDensity(vec2 worldXZ, float g, vec2 wind, vec2 lightXZ,
     mass += erosion * 0.06 * smoothstep(0.55, 1.0, g);
 #endif
 
-    // One octave of value noise concentrates hard around 0.5, so the base threshold is
-    // what actually decides how much of the sky carries cloud. At 0.645 only about a
-    // fifth of the field survived and the deck read as a few wisps rather than as
-    // weather; at 0.565 the base is a continuous sheet. The threshold still rises with
-    // height, so the crowns break into separate rounded puffs instead of the whole slab
-    // ending in a flat cut.
-    float threshold = mix(0.70, 0.40, saturate(CLOUD_COVERAGE));
-    threshold += smoothstep(0.05, 0.80, g) * 0.30;
+    // Coverage, not a soft threshold. This is the single change that turns the deck from
+    // drizzle into drawn cloud: subtract a coverage constant from the field, clamp at zero,
+    // and the silhouette gains an edge instead of fading out over a long ramp. The constant
+    // grows with height inside the slab, so the base stays continuous and the crowns break
+    // into separate puffs. MakeUp shapes its clouds the same way.
+    // A value-noise field sits around 0.5, so this is where the coverage constant has to
+    // live: 0.505 at the default keeps about half the base sheet and leaves the crowns to
+    // the height term below. Making it too small turns the sky into one solid overcast, which
+    // is the failure mode to watch for when tuning this.
+    float coverage = mix(0.64, 0.34, saturate(CLOUD_COVERAGE));
+    coverage += smoothstep(0.05, 0.85, g) * mix(0.30, 0.16, CLOUD_SOFTNESS);
 
-    float density = saturate((mass - threshold) * 2.3);
+    float noise = (mass - coverage) * mix(7.0, 3.0, CLOUD_SOFTNESS);
+    noise = max(noise, 0.0);
 
-    // A flat, full base and a slight falloff at the top. The shelf reaches almost full
-    // density within the first tenth of the slab, so bottoms are straight lines rather than
-    // gradients: flat bottoms and domed tops are what the eye reads as a drawn cloud.
-    density *= mix(0.62, 1.0, smoothstep(0.0, 0.10, g));
-    density *= 1.0 - 0.20 * g * g;
+    // A flat, full base. The shelf reaches most of full density within the first tenth of
+    // the slab, so bottoms are straight lines rather than gradients: flat bottoms and domed
+    // tops are what the eye reads as a cloud rather than as a smudge.
+    noise *= mix(0.70, 1.0, smoothstep(0.0, 0.10, g));
 
-    // Soft saturation with a lower knee, so a mass reaches a solid tone sooner and has a
-    // body instead of a gradient.
-    return density * inversesqrt(density * density + 0.18);
+    // Defined cores. x / sqrt(x^2 + k) saturates quickly, so a puff gets a body and a crisp
+    // border instead of a long soft ramp, and k is the only thing bounding how hard that
+    // border is.
+    float knee = mix(0.10, 0.60, CLOUD_SOFTNESS);
+    return noise * inversesqrt(noise * noise + knee);
 }
 
 /* Draw the cumulus deck over an existing sky colour. */

@@ -91,9 +91,13 @@ const float shadowDistance = 96.0; // [64.0 80.0 96.0 128.0]
 // Distance haze and height fog. 0.0 removes fog entirely, including the fade that hides
 // the edge of the render distance; 0.5 is the designed look, and anything past 1.5 is
 // deliberate mist.
-#define FOG_DENSITY 0.5 // [0.0 0.5 1.0 1.5 2.0 3.0]
+#define FOG_DENSITY 0.35 // [0.0 0.35 0.5 1.0 1.5 2.0]
 
 #define FOG_HEIGHT 72.0 // [24.0 72.0 256.0]
+
+// Blocks before the haze starts to build. Below this the air is clear, which is the
+// difference between atmosphere and permanent mist. 512 is effectively off.
+#define FOG_START 56.0 // [0.0 32.0 56.0 96.0 160.0 512.0]
 
 #define CLOUD_COVERAGE 0.45 // [0.0 0.45 1.0]
 
@@ -103,6 +107,11 @@ const float shadowDistance = 96.0; // [64.0 80.0 96.0 128.0]
 
 #define CLOUD_SPEED 1.0 // [0.0 1.0 3.0]
 
+// Cloud edge treatment. 0.0 is the stylised look: defined silhouettes, flat bases and puffs
+// that have a body. 1.0 is wispy and soft, which at this step count reads as drizzle rather
+// than as weather.
+#define CLOUD_SOFTNESS 0.0 // [0.0 0.5 1.0]
+
 #define WATER_WAVE_HEIGHT 1.0 // [0.0 1.0 2.5]
 
 #define WATER_WAVE_SPEED 1.0 // [0.0 1.0 2.0]
@@ -111,6 +120,14 @@ const float shadowDistance = 96.0; // [64.0 80.0 96.0 128.0]
 
 // Refraction offset strength in screen proportions.
 #define WATER_REFRACTION 1.0 // [0.0 0.5 1.0 1.5 2.0]
+
+// The sea itself, authored as 0-255 per channel and squared into linear light, the way MakeUp
+// authors its water. Blue above green above red is sea water; raising red is what turns it
+// into a lake, and raising all three makes it a tropical shelf. These three numbers are the
+// whole water body colour, seen both from above and from inside.
+#define WATER_RED 27 // [12 27 40 60 90]
+#define WATER_GREEN 74 // [40 74 110 140 180]
+#define WATER_BLUE 108 // [70 108 150 180 220]
 
 // How strongly the water column colours what is seen through it, and how much of the
 // medium there is to see when the eye is inside it. 1.0 is the designed look; 0 turns

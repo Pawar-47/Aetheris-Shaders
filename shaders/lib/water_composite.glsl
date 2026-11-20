@@ -174,10 +174,16 @@ vec3 aetherisWaterSurface(vec2 uv, vec4 waterData, AetherisSky sky, vec3 sceneCo
     vec3 transmittance = exp(-extinction * thickness);
 
     // Light that scattered inside the body rather than passing straight through.
-    // Sea water scatters blue, not teal: the green channel is deliberately well below
-    // the blue here, which is what stops deep water reading as a swimming pool.
-    vec3 incident = sky.ambientSky * 1.9 + sky.sunRadiance * 0.14;
-    vec3 scatterColour = vec3(0.020, 0.110, 0.215) * incident;
+    // The colour is authored, not derived: WATER_RED/GREEN/BLUE are 0-255, squared into
+    // linear light the way MakeUp does it, so the water has a colour of its own instead of
+    // inheriting the sky's. That is what makes it read as sea rather than as a tinted slab.
+    vec3 seaLinear = vec3(float(WATER_RED), float(WATER_GREEN), float(WATER_BLUE)) / 255.0;
+    seaLinear *= seaLinear;
+
+    // A body colour is lit, not additive: without the incident factor the water glows at
+    // night and stays flat at noon.
+    vec3 incident = vec3(0.55) + sky.ambientSky * 2.10 + sky.sunRadiance * 0.12;
+    vec3 scatterColour = seaLinear * incident;
 
     vec3 body = refracted * transmittance + scatterColour * (vec3(1.0) - transmittance);
 
