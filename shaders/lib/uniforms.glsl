@@ -1,6 +1,12 @@
 #ifndef AETHERIS_UNIFORMS_GLSL
 #define AETHERIS_UNIFORMS_GLSL
 
+// settings.glsl is pulled in here as well as by util.glsl so that a unit which needs
+// nothing but uniforms still carries the option constants. Iris reads
+// shadowMapResolution and shadowDistance out of the program source, and both stages
+// of a program should agree on them.
+#include "/lib/settings.glsl"
+
 /* Iris supplied uniforms.
  *
  * Only declarations here. Samplers are declared by the library that samples them,

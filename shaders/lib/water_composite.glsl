@@ -3,6 +3,7 @@
 
 #include "/lib/depth.glsl"
 #include "/lib/sky.glsl"
+#include "/lib/water.glsl"
 
 /* The water surface, shaded in composite.
  *
