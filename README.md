@@ -251,6 +251,18 @@ accept, and it is not worth a few percent of bandwidth against a failure to load
 
 ---
 
+### Post-processing and material response
+
+Bloom is extracted from the lit scene into a low-resolution buffer and softened with a
+five-tap blur. Light shafts are a bounded screen-space radial sample from the projected sun,
+accumulated only where the depth buffer says the sample is sky. They are a **volumetric-style
+screen-space approximation**, not a full 3D participating-media simulation. Both effects
+share the same low-resolution pipeline. Material gloss is a simple Blinn-Phong highlight
+for a curated set of metallic/polished block IDs; it is not PBR and requires no companion
+resource pack.
+
+---
+
 ## What has and has not been verified
 
 The evidence below is tied to the perf/full-feature-performance branch at commit
