@@ -32,6 +32,27 @@ Three changes, all art direction rather than correctness.
   shallows read turquoise rather than green. The underwater tint follows the same palette, and
   the cheap cloud sample used by water reflections matches the new deck.
 
+## [1.6.1] - 2026-12-02
+
+The sky, taken from the same reference.
+
+### Changed
+
+- **The sun is MakeUp's.** Its disc is
+  `pow(smoothstep(1 - 0.007 * SUN_SIZE, 1.0, dot(dir, sunDir)), 3.0)` — several times vanilla's
+  size, with a *cubed* smoothstep so the edge is soft while the core stays solid. That soft
+  edge is what removes the stair-stepping the old hard-edged circle showed once it was more
+  than a few pixels across, which is where the sky artifacts came from. The tint is the sun's
+  own transmittance raised to a power that grows towards the horizon
+  (`pow(1 - height, 16) * 4 + 1`), so it reddens into a sunset instead of only dimming.
+- **The moon uses the same construction** at its own size, so the pair read as one pack rather
+  than two.
+- **The dome is dithered.** A quarter of a quantisation step added to the gradient coordinate,
+  fixed rather than random: that is how MakeUp kills the banding that a gradient spanning
+  hundreds of pixels shows in an 8 bit frame, and a fixed pattern cannot crawl.
+- `SUN_SIZE` is new, default 1.0 (MakeUp's disc). 0.5 is about vanilla's, 3.0 is a
+  deliberately stylised big sun, and it scales the moon with it.
+
 ## [1.6.0] - 2026-12-02
 
 Three complaints, each fixed by porting the approach of the reference pack — MakeUp, as it

@@ -74,8 +74,14 @@ vec3 aetherisSunDisc(vec3 dir, AetherisSky sky) {
     float forward = dot(dir, sky.sunDir);
     if (forward < 0.86) return vec3(0.0);
 
-    float radius = length(aetherisDiscOffset(dir, sky.sunDir));
-    float body = 1.0 - smoothstep(0.0125, 0.0175, radius);
+    // The disc is MakeUp's shape: a radius from a size constant and a *cubed* smoothstep
+    // across the angular distance. The cube is what gives it a soft edge and a solid core,
+    // and that softness is what keeps it free of the stair-stepping a hard-edged circle shows
+    // when it is only a few degrees across. At 1.0 this is already several times vanilla's
+    // sun, which is the look being imitated.
+    float size = 0.007 * SUN_SIZE;
+    float body = smoothstep(1.0 - size, 1.0, forward);
+    body = body * body * body;
 
     // Two lobes of the same phase function, wide and tight, approximating what a
     // real Mie halo does without the integral.
@@ -83,7 +89,11 @@ vec3 aetherisSunDisc(vec3 dir, AetherisSky sky) {
     float tight = miePhaseNormalised(forward, 0.92);
     float halo = wide * 0.42 + tight * 1.15;
 
-    vec3 tint = sunTransmittance(clamp(sky.sunDir.y, 0.0, 1.0));
+    // MakeUp's reddening: the sun's own transmittance raised to a power that grows as it
+    // approaches the horizon, so it goes orange and then deep red rather than just dimming.
+    float horizonPower = pow(1.0 - saturate(sky.sunDir.y), 16.0) * 4.0 + 1.0;
+    vec3 tint = pow(sunTransmittance(clamp(sky.sunDir.y, 0.0, 1.0)), vec3(horizonPower));
+
     vec3 colour = tint * (body * 26.0 + halo * 2.4);
 
     // The disc sinks out of sight smoothly, and rain swallows it.
@@ -95,13 +105,16 @@ vec3 aetherisSunDisc(vec3 dir, AetherisSky sky) {
 /* The moon, with just enough mottling that it is not a flat coin. */
 vec3 aetherisMoonDisc(vec3 dir, AetherisSky sky) {
     float forward = dot(dir, sky.moonDir);
-    if (forward < 0.94 || sky.night < 0.02) return vec3(0.0);
+    if (forward < 0.95 || sky.night < 0.02) return vec3(0.0);
 
-    vec2 offset = aetherisDiscOffset(dir, sky.moonDir);
-    float radius = length(offset);
-    float body = 1.0 - smoothstep(0.0105, 0.0142, radius);
+    // The same MakeUp construction as the sun, at the moon's own size. Keeping the pair on one
+    // construction is what stops them looking like two different packs.
+    float size = 0.003 * SUN_SIZE;
+    float body = smoothstep(1.0 - size, 1.0, forward);
+    body = body * body * body;
     if (body <= 0.0) return vec3(0.0);
 
+    vec2 offset = aetherisDiscOffset(dir, sky.moonDir);
     float maria = 0.78 + 0.22 * valueNoise(offset * 62.0);
     vec3 colour = vec3(0.86, 0.91, 1.08) * (body * maria * 3.4);
 

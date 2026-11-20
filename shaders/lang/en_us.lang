@@ -12,6 +12,7 @@ profile.PERFORMANCE=Performance
 profile.VISUAL=Visual
 
 option.SUN_STRENGTH=Sunlight strength
+option.SUN_SIZE=Sun and moon size
 option.AMBIENT_STRENGTH=Ambient strength
 option.BLOCKLIGHT_STRENGTH=Block light strength
 option.FOG_DENSITY=Fog density

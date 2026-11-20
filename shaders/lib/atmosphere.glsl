@@ -137,7 +137,10 @@ void aetherisDomePalette(AetherisSky sky, out vec3 zenith, out vec3 horizon) {
  * one instruction; pow is a call. */
 vec3 aetherisSkyGradient(vec3 dir, AetherisSky sky) {
     float above = saturate(dir.y);
-    float height = sqrt(above);
+    // Dither the dome coordinate. A gradient that spans hundreds of pixels bands visibly in
+    // an 8 bit frame, and MakeUp dithers the same term for the same reason: a quarter of a
+    // quantisation step, fixed rather than random, so it never crawls between frames.
+    float height = sqrt(above) + aetherisDither(gl_FragCoord.xy) * 0.004;
 
     vec3 zenith;
     vec3 horizon;

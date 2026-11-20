@@ -84,6 +84,11 @@ const float shadowDistance = 96.0; // [64.0 80.0 96.0 128.0]
 // the ACES shoulder, dark enough that a lit surface is not already white.
 #define SUN_STRENGTH 2.10 // [1.00 2.10 3.00 4.00]
 
+// Sun and moon size. 1.0 is MakeUp's disc, which is already several times vanilla's; 0.5 is
+// roughly vanilla, 3.0 is a deliberately stylised big sun. The shape is a soft-edged disc
+// with a solid core, so it stays clean at any size.
+#define SUN_SIZE 1.0 // [0.5 1.0 1.5 2.0 3.0]
+
 #define AMBIENT_STRENGTH 1.0 // [0.0 1.0 3.0]
 
 #define BLOCKLIGHT_STRENGTH 1.0 // [0.0 1.0 3.0]
