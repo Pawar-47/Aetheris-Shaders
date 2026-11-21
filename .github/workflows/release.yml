@@ -1,31 +1,31 @@
-name: Release
+name: Performance Branch Release
 
-# Fires when VERSION or CHANGELOG.md changes on main, and only then. A release is a
-# statement that the pack in that zip is worth installing, so it is tied to a
-# deliberate edit rather than to every push. The guard step below makes it
-# idempotent: publishing the same version twice is a no-op.
+# Performance-track releases are built from this branch only. Each release is
+# versioned independently from main by the perf-v tag prefix.
 on:
   push:
-    branches: [main]
+    branches:
+      - "perf/full-feature-performance"
     paths:
       - "VERSION"
       - "CHANGELOG.md"
+      - ".github/workflows/release.yml"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: release
+  group: performance-release
   cancel-in-progress: false
 
 jobs:
   release:
-    name: Build and publish
+    name: Validate, package and publish performance build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout exact branch commit
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -36,53 +36,72 @@ jobs:
       - name: Static validation
         run: python3 tools/validate.py
 
-      # The release gate has to include the compiler check. Without it a pack that does not
-      # compile can still be published, which is precisely how 1.5.2 shipped.
-      - name: Install glslang
+      - name: Install GLSL compiler
         run: sudo apt-get update -qq && sudo apt-get install -y -qq glslang-tools
 
-      - name: GLSL compile check
+      - name: Compile every shader stage
         run: python3 tools/glsl_check.py
 
-      - name: Read version
+      - name: Read version and derive performance release identity
         id: version
-        run: echo "version=$(tr -d ' \t\r\n' < VERSION)" >> "$GITHUB_OUTPUT"
+        shell: bash
+        run: |
+          version="$(tr -d ' \t\r\n' < VERSION)"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid VERSION: $version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=perf-v$version" >> "$GITHUB_OUTPUT"
+          echo "name=perf Aetheris Shaders v$version" >> "$GITHUB_OUTPUT"
 
-      - name: Check whether this version is already released
+      - name: Check whether this performance version is already released
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view "v${{ steps.version.outputs.version }}" > /dev/null 2>&1; then
+          if gh release view "${{ steps.version.outputs.tag }}" > /dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Package
+      - name: Package shaderpack
         if: steps.check.outputs.exists == 'false'
         run: |
           chmod +x tools/package.sh
           tools/package.sh
+          mv "build/Aetheris-Shaders-${{ steps.version.outputs.version }}.zip" \
+             "build/perf-Aetheris-Shaders-${{ steps.version.outputs.version }}.zip"
 
-      - name: Take the release body from the changelog
+      - name: Extract the matching version's changelog section
         if: steps.check.outputs.exists == 'false'
+        shell: bash
         run: |
-          # The first "## [" section of CHANGELOG.md is the entry for this version.
-          awk 'BEGIN { n = 0 } /^## \[/ { n++ } n == 1 { print }' CHANGELOG.md > build/BODY.md
+          awk -v version="${{ steps.version.outputs.version }}" '
+            $0 ~ "^## \\[" version "\\]" { found=1 }
+            found && /^## \[/ && $0 !~ "^## \\[" version "\\]" { exit }
+            found { print }
+          ' CHANGELOG.md > build/BODY.md
           if [ ! -s build/BODY.md ]; then
-            echo "No changelog entry found" >&2
+            echo "No changelog entry found for version ${{ steps.version.outputs.version }}" >&2
             exit 1
           fi
+          {
+            echo "> Performance-track build from `perf/full-feature-performance`."
+            echo
+            cat build/BODY.md
+          } > build/BODY.tmp
+          mv build/BODY.tmp build/BODY.md
           cat build/BODY.md
 
-      - name: Publish release
+      - name: Publish performance pre-release
         if: steps.check.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: Aetheris Shaders v${{ steps.version.outputs.version }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.name }}
           body_path: build/BODY.md
-          files: build/*.zip
+          files: build/perf-*.zip
           draft: false
-          prerelease: false
+          prerelease: true
